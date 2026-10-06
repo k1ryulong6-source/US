@@ -106,3 +106,12 @@ export async function attachMedia(usId: string, memoryId: string, item: Prepared
 export async function removeFiles(paths: string[]) {
   if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
 }
+
+/** Upload a perspective voice clip into {us}/{memory}/p/ and return its path. */
+export async function uploadPerspectiveAudio(usId: string, memoryId: string, item: PreparedMedia): Promise<string> {
+  const mime = baseMime(item.mime);
+  const path = `${usId}/${memoryId}/p/${crypto.randomUUID()}.${extFor(mime)}`;
+  const up = await supabase.storage.from(BUCKET).upload(path, item.blob, { contentType: mime, upsert: false });
+  if (up.error) throw up.error;
+  return path;
+}

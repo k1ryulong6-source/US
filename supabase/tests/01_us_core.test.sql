@@ -123,12 +123,16 @@ select throws_ok(format('select accept_invitation(%L)', :'inv_bob'), 'P0002', nu
 select pg_temp.login(:alice);
 select create_invitation(:'us1') as inv_expired \gset
 select create_invitation(:'us1') as inv_revoked \gset
-select revoke_invitation((select id from invitations where us_id = :'us1' order by created_at desc, id limit 1)) is null as ok \gset
 select pg_temp.logout();
 update invitations set expires_at = now() - interval '1 minute'
   where token_hash = encode(sha256(convert_to(:'inv_expired', 'UTF8')), 'hex');
-update invitations set revoked_at = now()
-  where token_hash = encode(sha256(convert_to(:'inv_revoked', 'UTF8')), 'hex');
+select id as inv_revoked_id from invitations
+  where token_hash = encode(sha256(convert_to(:'inv_revoked', 'UTF8')), 'hex') \gset
+select pg_temp.login(:carol);
+select throws_ok(format('select revoke_invitation(%L)', :'inv_revoked_id'), '42501', null,
+  'an outsider cannot revoke US1 links');
+select pg_temp.login(:alice);
+select lives_ok(format('select revoke_invitation(%L)', :'inv_revoked_id'), 'a member can revoke a link');
 select pg_temp.login(:stranger);
 select throws_ok(format('select accept_invitation(%L)', :'inv_expired'), 'P0002', null, 'an expired link does not work');
 select throws_ok(format('select accept_invitation(%L)', :'inv_revoked'), 'P0002', null, 'a revoked link does not work');

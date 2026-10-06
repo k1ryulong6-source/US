@@ -11,6 +11,7 @@ import { t } from '../strings';
 import BackLink from '../components/BackLink';
 import ErrorNote from '../components/ErrorNote';
 import MediaView from '../components/MediaView';
+import Perspectives from '../components/Perspectives';
 
 export default function MemoryDetail() {
   const { id = '', mid = '' } = useParams();
@@ -71,7 +72,9 @@ export default function MemoryDetail() {
         </>
       )}
 
-      {/* perspectives: phase (c) */}
+      {session && (
+        <Perspectives usId={id} memoryId={mid} me={session.user.id} closed={space?.state === 'closed'} />
+      )}
 
       {editable && (
         <button className="link danger" onClick={remove}>

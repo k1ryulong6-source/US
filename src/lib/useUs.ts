@@ -17,7 +17,7 @@ export function useUs(id: string | undefined) {
         .maybeSingle(),
       supabase
         .from('us_members')
-        .select('user_id, joined_at, left_at, profiles(display_name)')
+        .select('user_id, joined_at, left_at, profiles!us_members_user_id_fkey(display_name)')
         .eq('us_id', id)
         .is('left_at', null)
         .order('joined_at', { ascending: true }),

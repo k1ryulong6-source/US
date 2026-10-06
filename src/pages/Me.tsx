@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { t } from '../strings';
@@ -115,6 +116,10 @@ export default function Me() {
       )}
 
       <ErrorNote show={Boolean(error)} text={error ?? undefined} />
+
+      <Link to="/me/kept" className="link">
+        {t.me.seenCollection}
+      </Link>
 
       <button className="link" onClick={signOut}>
         {t.me.signOut}

@@ -85,11 +85,16 @@ export default function UsPage() {
         </ul>
       </section>
 
-      {space.state !== 'closed' && (
-        <Link to={`/us/${space.id}/m/new`} className="button primary self-start">
-          {t.memory.add}
+      <div className="row">
+        {space.state !== 'closed' && (
+          <Link to={`/us/${space.id}/m/new`} className="button primary">
+            {t.memory.add}
+          </Link>
+        )}
+        <Link to={`/us/${space.id}/seen`} className="link">
+          {t.seen.linkFromUs}
         </Link>
-      )}
+      </div>
 
       {memories === null ? null : memories.length === 0 ? (
         <section className="paper">

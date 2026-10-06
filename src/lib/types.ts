@@ -84,3 +84,25 @@ export interface MemoryMedia {
   duration_ms: number | null;
   position: number;
 }
+
+export interface Perspective {
+  id: string;
+  memory_id: string;
+  author_id: string;
+  body: string;
+  is_private: boolean;
+  audio_path: string | null;
+  audio_mime: string | null;
+  audio_duration_ms: number | null;
+  created_at: string;
+  profiles?: { display_name: string } | null;
+}
+
+export interface SeenNote {
+  id: string;
+  us_id: string;
+  from_id: string;
+  to_id: string;
+  body: string;
+  created_at: string;
+}

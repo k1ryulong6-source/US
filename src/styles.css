@@ -523,3 +523,12 @@ details > summary::-webkit-details-marker {
 .recording {
   border-color: var(--accent);
 }
+
+.perspective {
+  border-left: 2px solid var(--line);
+  padding-left: 14px;
+}
+.radio input[type='checkbox'] {
+  margin-top: 6px;
+  accent-color: var(--accent);
+}
