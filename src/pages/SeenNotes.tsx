@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Navigate, useParams } from 'react-router-dom';
+import { Navigate, useLocation, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useUs } from '../lib/useUs';
@@ -11,6 +11,7 @@ import ErrorNote from '../components/ErrorNote';
 
 export default function SeenNotes() {
   const { id = '' } = useParams();
+  const prompt = (useLocation().state as { prompt?: string } | null)?.prompt;
   const { session } = useAuth();
   const me = session?.user.id ?? '';
   const { space, members, missing } = useUs(id);
@@ -77,6 +78,7 @@ export default function SeenNotes() {
       <BackLink to={`/us/${id}`} />
       <header className="stack-sm">
         <h1 className="title">{t.seen.title}</h1>
+        {prompt && <p className="question-body">{prompt}</p>}
         <p className="quiet">{t.seen.intro}</p>
       </header>
 

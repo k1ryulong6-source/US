@@ -5,6 +5,7 @@ import { presetName } from '../lib/format';
 import type { MyUsListItem } from '../lib/types';
 import { t } from '../strings';
 import ErrorNote from '../components/ErrorNote';
+import WeeklyQuestion from '../components/WeeklyQuestion';
 
 export default function Home() {
   const [items, setItems] = useState<MyUsListItem[] | null>(null);
@@ -49,7 +50,7 @@ export default function Home() {
 
   return (
     <div className="stack-lg">
-      {/* The weekly question lands here in phase (d). */}
+      <WeeklyQuestion />
 
       {items.length === 0 ? (
         <p className="quiet pre center pad">{t.home.empty}</p>

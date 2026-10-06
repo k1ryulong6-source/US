@@ -17,6 +17,9 @@ import MemoryDetail from './pages/MemoryDetail';
 import MemoryEdit from './pages/MemoryEdit';
 import SeenNotes from './pages/SeenNotes';
 import SeenCollection from './pages/SeenCollection';
+import Answer from './pages/Answer';
+import Intentions from './pages/Intentions';
+import IntentionDone from './pages/IntentionDone';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { ready, session, profile } = useAuth();
@@ -44,6 +47,9 @@ export default function App() {
       <Route path="/us/:id/m/:mid" element={<RequireAuth><MemoryDetail /></RequireAuth>} />
       <Route path="/us/:id/m/:mid/edit" element={<RequireAuth><MemoryEdit /></RequireAuth>} />
       <Route path="/us/:id/seen" element={<RequireAuth><SeenNotes /></RequireAuth>} />
+      <Route path="/answer" element={<RequireAuth><Answer /></RequireAuth>} />
+      <Route path="/intentions" element={<RequireAuth><Intentions /></RequireAuth>} />
+      <Route path="/intentions/:iid/done" element={<RequireAuth><IntentionDone /></RequireAuth>} />
       <Route path="/me/kept" element={<RequireAuth><SeenCollection /></RequireAuth>} />
       <Route path="/me" element={<RequireAuth><Me /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />

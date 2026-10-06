@@ -106,3 +106,28 @@ export interface SeenNote {
   body: string;
   created_at: string;
 }
+
+export type PromptKind = 'general' | 'seen';
+export type IntentionVisibility = 'private' | 'shared';
+export type IntentionStatus = 'open' | 'done' | 'let_go';
+
+export interface Prompt {
+  id: number;
+  body: string;
+  kind: PromptKind;
+}
+
+export interface Intention {
+  id: string;
+  us_id: string;
+  author_id: string;
+  body: string;
+  visibility: IntentionVisibility;
+  status: IntentionStatus;
+  done_at: string | null;
+  memory_id: string | null;
+  done_note: string | null;
+  prompt_id: number | null;
+  created_at: string;
+  us_spaces?: { name: string } | null;
+}

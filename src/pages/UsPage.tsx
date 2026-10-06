@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
@@ -8,7 +8,8 @@ import { t } from '../strings';
 import BackLink from '../components/BackLink';
 import MemoryCard from '../components/MemoryCard';
 import { MEMORY_SELECT } from '../lib/memories';
-import type { Memory } from '../lib/types';
+import type { Intention, Memory } from '../lib/types';
+import IntentionItem from '../components/IntentionItem';
 
 export default function UsPage() {
   const { id } = useParams();
@@ -16,6 +17,22 @@ export default function UsPage() {
   const { space, members, missing } = useUs(id);
   const [proposalWaiting, setProposalWaiting] = useState(false);
   const [memories, setMemories] = useState<Memory[] | null>(null);
+  const [intentions, setIntentions] = useState<Intention[]>([]);
+
+  const loadIntentions = useCallback(async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from('intentions')
+      .select('*')
+      .eq('us_id', id)
+      .eq('status', 'open')
+      .order('created_at', { ascending: true });
+    setIntentions((data as Intention[]) ?? []);
+  }, [id]);
+
+  useEffect(() => {
+    void loadIntentions();
+  }, [loadIntentions]);
 
   useEffect(() => {
     if (!id) return;
@@ -95,6 +112,36 @@ export default function UsPage() {
           {t.seen.linkFromUs}
         </Link>
       </div>
+
+      {(intentions.length > 0 || space.state !== 'closed') && (
+        <section className="stack-sm">
+          {intentions.some((i) => i.visibility === 'shared') && (
+            <>
+              <h2 className="subtitle">{t.intention.ourPlans}</h2>
+              {intentions
+                .filter((i) => i.visibility === 'shared')
+                .map((i) => (
+                  <IntentionItem key={i.id} intention={i} me={me ?? ''} onChange={loadIntentions} />
+                ))}
+            </>
+          )}
+          {intentions.some((i) => i.visibility === 'private') && (
+            <>
+              <h2 className="subtitle">{t.intention.myPrivate}</h2>
+              {intentions
+                .filter((i) => i.visibility === 'private')
+                .map((i) => (
+                  <IntentionItem key={i.id} intention={i} me={me ?? ''} onChange={loadIntentions} />
+                ))}
+            </>
+          )}
+          {space.state !== 'closed' && (
+            <Link to={`/answer?us=${space.id}`} className="link">
+              {t.intention.add}
+            </Link>
+          )}
+        </section>
+      )}
 
       {memories === null ? null : memories.length === 0 ? (
         <section className="paper">
