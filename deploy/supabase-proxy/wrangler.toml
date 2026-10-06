@@ -1,0 +1,11 @@
+# Deploy with:  npx wrangler deploy --config deploy/supabase-proxy/wrangler.toml
+name = "us-supabase-proxy"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# Replace with your own subdomain (the zone must be on Cloudflare).
+routes = [{ pattern = "api.example.com", custom_domain = true }]
+
+[vars]
+# Replace with your project URL from Supabase → Project Settings → API.
+SUPABASE_URL = "https://YOUR-PROJECT-REF.supabase.co"
