@@ -24,11 +24,11 @@ end $$;
 \set erin  '''e0000000-0000-4000-8000-00000000000e'''
 
 insert into auth.users (id, email, raw_user_meta_data) values
-  (:alice, 'alice@example.com', '{"display_name":"Alice"}'),
-  (:bob,   'bob@example.com',   '{"display_name":"Bob"}'),
-  (:carol, 'carol@example.com', '{"display_name":"Carol"}'),
-  (:dave,  'dave@example.com',  '{"display_name":"Dave"}'),
-  (:erin,  'erin@example.com',  '{"display_name":"Erin"}');
+  (:alice, 'alice@pgtap.test', '{"display_name":"Alice"}'),
+  (:bob,   'bob@pgtap.test',   '{"display_name":"Bob"}'),
+  (:carol, 'carol@pgtap.test', '{"display_name":"Carol"}'),
+  (:dave,  'dave@pgtap.test',  '{"display_name":"Dave"}'),
+  (:erin,  'erin@pgtap.test',  '{"display_name":"Erin"}');
 
 -- US1: alice, bob, dave, erin. carol is outside.
 select pg_temp.login(:alice);

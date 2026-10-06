@@ -20,6 +20,7 @@ import SeenCollection from './pages/SeenCollection';
 import Answer from './pages/Answer';
 import Intentions from './pages/Intentions';
 import IntentionDone from './pages/IntentionDone';
+import Export from './pages/Export';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { ready, session, profile } = useAuth();
@@ -50,6 +51,7 @@ export default function App() {
       <Route path="/answer" element={<RequireAuth><Answer /></RequireAuth>} />
       <Route path="/intentions" element={<RequireAuth><Intentions /></RequireAuth>} />
       <Route path="/intentions/:iid/done" element={<RequireAuth><IntentionDone /></RequireAuth>} />
+      <Route path="/me/export" element={<RequireAuth><Export /></RequireAuth>} />
       <Route path="/me/kept" element={<RequireAuth><SeenCollection /></RequireAuth>} />
       <Route path="/me" element={<RequireAuth><Me /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />

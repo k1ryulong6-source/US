@@ -22,10 +22,10 @@ end $$;
 \set dave  '''d0000000-0000-4000-8000-00000000000d'''
 
 insert into auth.users (id, email, raw_user_meta_data) values
-  (:alice, 'alice@example.com', '{"display_name":"Alice"}'),
-  (:bob,   'bob@example.com',   '{"display_name":"Bob"}'),
-  (:carol, 'carol@example.com', '{"display_name":"Carol"}'),
-  (:dave,  'dave@example.com',  '{"display_name":"Dave"}');
+  (:alice, 'alice@pgtap.test', '{"display_name":"Alice"}'),
+  (:bob,   'bob@pgtap.test',   '{"display_name":"Bob"}'),
+  (:carol, 'carol@pgtap.test', '{"display_name":"Carol"}'),
+  (:dave,  'dave@pgtap.test',  '{"display_name":"Dave"}');
 
 select pg_temp.login(:alice);
 select create_us('我们') as us1 \gset

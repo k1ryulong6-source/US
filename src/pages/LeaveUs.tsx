@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { removeFiles } from '../lib/media';
 import { supabase } from '../lib/supabase';
 import { useUs } from '../lib/useUs';
 import type { LeaveMode } from '../lib/types';
@@ -20,9 +21,14 @@ export default function LeaveUs() {
 
   async function leave() {
     setBusy(true);
-    const { error } = await supabase.rpc('leave_us', { p_us: id, p_mode: mode });
+    const { data, error } = await supabase.rpc('leave_us', { p_us: id, p_mode: mode });
+    if (error) {
+      setBusy(false);
+      return setFailed(true);
+    }
+    // Others can no longer read these; delete the files themselves too.
+    await removeFiles((data as string[] | null) ?? []);
     setBusy(false);
-    if (error) return setFailed(true);
     navigate('/', { replace: true });
   }
 
@@ -31,7 +37,9 @@ export default function LeaveUs() {
       <BackLink to={`/us/${id}/about`} />
       <h1 className="title">{t.leave.title}</h1>
       <p>{t.leave.intro}</p>
-      <p className="quiet small">{t.leave.exportFirst}</p>
+      <Link to="/me/export" className="link">
+        {t.leave.exportFirst}
+      </Link>
 
       <div className="stack-sm" role="radiogroup">
         <label className="radio paper">

@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { t } from '../strings';
 import ErrorNote from '../components/ErrorNote';
+import ReminderSettings from '../components/ReminderSettings';
+import { disableReminder, isIos, isStandalone } from '../lib/push';
 
 export default function Me() {
   const { session, profile, isGuest, refreshProfile } = useAuth();
@@ -53,6 +55,8 @@ export default function Me() {
 
   async function signOut() {
     if (isGuest && !window.confirm(t.me.signOutGuestWarn)) return;
+    // This device should not keep reminding the next person who signs in.
+    await disableReminder().catch(() => undefined);
     await supabase.auth.signOut();
   }
 
@@ -117,8 +121,15 @@ export default function Me() {
 
       <ErrorNote show={Boolean(error)} text={error ?? undefined} />
 
+      <ReminderSettings />
+
+      {isIos() && !isStandalone() && <p className="quiet small">{t.install.hint}</p>}
+
       <Link to="/me/kept" className="link">
         {t.me.seenCollection}
+      </Link>
+      <Link to="/me/export" className="link">
+        {t.me.export}
       </Link>
 
       <button className="link" onClick={signOut}>

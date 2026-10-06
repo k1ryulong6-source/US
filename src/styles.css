@@ -556,3 +556,28 @@ details > summary::-webkit-details-marker {
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
+
+/* ------------------------------------------------------------ timeline */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.year {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 15px;
+  letter-spacing: 0.2em;
+  color: var(--ink-faint);
+  margin: 12px 0 0;
+}
+.moment {
+  display: flex;
+  flex-direction: column;
+  border-left: 2px solid var(--line);
+  padding-left: 14px;
+}
+.serif {
+  font-family: var(--serif);
+}

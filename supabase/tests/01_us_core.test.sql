@@ -35,15 +35,16 @@ end $$;
 \set stranger '''f0000000-0000-4000-8000-00000000000f'''
 
 insert into auth.users (id, email, is_anonymous, raw_user_meta_data) values
-  (:alice,    'alice@example.com', false, '{"display_name":"Alice"}'),
-  (:bob,      'bob@example.com',   false, '{"display_name":"Bob"}'),
-  (:carol,    'carol@example.com', false, '{"display_name":"Carol"}'),
-  (:dave,     'dave@example.com',  false, '{"display_name":"Dave"}'),
+  (:alice,    'alice@pgtap.test', false, '{"display_name":"Alice"}'),
+  (:bob,      'bob@pgtap.test',   false, '{"display_name":"Bob"}'),
+  (:carol,    'carol@pgtap.test', false, '{"display_name":"Carol"}'),
+  (:dave,     'dave@pgtap.test',  false, '{"display_name":"Dave"}'),
   (:guest1,   null,                true,  '{}'),
   (:guest2,   null,                true,  '{}'),
   (:stranger, null,                true,  '{}');
 
-select is((select count(*)::int from profiles), 7, 'a profile is created for every new auth user');
+select is((select count(*)::int from profiles where id in (:alice, :bob, :carol, :dave, :guest1, :guest2, :stranger)), 7,
+  'a profile is created for every new auth user');
 
 -- ------------------------------------------------------------------ setup --
 -- US1: alice + bob + guest1 (+ dave, who will leave). US2: carol + guest2.

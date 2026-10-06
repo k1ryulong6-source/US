@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && tsc -p tsconfig.sw.json && vite build",
     "preview": "vite preview --host",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.sw.json",
     "test:db": "supabase test db",
     "test:db:local": "scripts/db/test-local.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
+    "fflate": "^0.8.3",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router-dom": "^7.18.4"
@@ -23,6 +24,9 @@
     "@vitejs/plugin-react": "^6.1.2",
     "supabase": "^2.120.0",
     "typescript": "~5.9.3",
-    "vite": "^8.3.3"
+    "vite": "^8.3.3",
+    "vite-plugin-pwa": "^2.0.0",
+    "workbox-precaching": "^7.4.1",
+    "workbox-routing": "^7.4.1"
   }
 }

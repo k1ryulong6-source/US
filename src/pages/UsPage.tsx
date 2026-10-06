@@ -6,9 +6,9 @@ import { useUs } from '../lib/useUs';
 import { displayName, presetName } from '../lib/format';
 import { t } from '../strings';
 import BackLink from '../components/BackLink';
-import MemoryCard from '../components/MemoryCard';
+import Timeline from '../components/Timeline';
 import { MEMORY_SELECT } from '../lib/memories';
-import type { Intention, Memory } from '../lib/types';
+import type { HistoryEntry, Intention, Memory, TimelineIntention } from '../lib/types';
 import IntentionItem from '../components/IntentionItem';
 
 export default function UsPage() {
@@ -34,15 +34,26 @@ export default function UsPage() {
     void loadIntentions();
   }, [loadIntentions]);
 
+  const [doneTogether, setDoneTogether] = useState<TimelineIntention[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+
   useEffect(() => {
     if (!id) return;
-    supabase
-      .from('memories')
-      .select(MEMORY_SELECT)
-      .eq('us_id', id)
-      .order('happened_on', { ascending: false })
-      .order('created_at', { ascending: false })
-      .then(({ data }) => setMemories((data as Memory[]) ?? []));
+    (async () => {
+      const [m, i, h] = await Promise.all([
+        supabase.from('memories').select(MEMORY_SELECT).eq('us_id', id),
+        supabase
+          .from('intentions')
+          .select('id, body, done_at, memory_id, created_at')
+          .eq('us_id', id)
+          .eq('visibility', 'shared')
+          .eq('status', 'done'),
+        supabase.from('relationship_history').select('id, from_stage, to_stage, happened_on, created_at').eq('us_id', id),
+      ]);
+      setDoneTogether((i.data as TimelineIntention[]) ?? []);
+      setHistory((h.data as HistoryEntry[]) ?? []);
+      setMemories((m.data as Memory[]) ?? []);
+    })();
   }, [id]);
 
   useEffect(() => {
@@ -143,16 +154,12 @@ export default function UsPage() {
         </section>
       )}
 
-      {memories === null ? null : memories.length === 0 ? (
+      {memories === null ? null : memories.length + doneTogether.length + history.length === 0 ? (
         <section className="paper">
           <p className="quiet center">{t.memory.empty}</p>
         </section>
       ) : (
-        <div className="stack">
-          {memories.map((m) => (
-            <MemoryCard key={m.id} memory={m} />
-          ))}
-        </div>
+        <Timeline memories={memories} intentions={doneTogether} history={history} />
       )}
     </div>
   );

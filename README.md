@@ -20,6 +20,9 @@ src/pages/                screens
 supabase/migrations/      schema, RLS, RPC functions
 supabase/tests/           pgTAP tests proving who can read what
 supabase/templates/       auth emails (6-digit code)
+supabase/functions/       weekly-reminder Edge Function (optional Web Push)
+supabase/sql/             one-off SQL to schedule the reminder
+src/sw.ts                 service worker: app shell + push
 deploy/supabase-proxy/    Cloudflare Worker reverse proxy
 scripts/db/               run pgTAP without Docker
 ```
@@ -29,5 +32,6 @@ scripts/db/               run pgTAP without Docker
 ```bash
 npm run dev            # Vite dev server
 npm run build          # typecheck + production build
-npx supabase test db   # RLS tests (needs `npx supabase start`)
+npx supabase test db   # 197 RLS / behaviour tests (needs `npx supabase start`)
+npm run test:db:local  # same tests on a plain Postgres + pgTAP, no Docker
 ```

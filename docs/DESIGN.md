@@ -28,17 +28,26 @@
 
 ## 数据模型
 
-已实现（阶段 a）：
+全部已实现（`supabase/migrations/`，按阶段分为 5 个文件）：
 
-- `profiles`(id, display_name)
-- `us_spaces`(name, description, preset_label, stage, state)，**没有 owner 列**
-- `us_members`(us_id, user_id, joined_at, left_at, left_mode)
-- `my_us_prefs`(user_id, us_id, sort_order, hidden)：只有本人可读
-- `invitations`(us_id, token_hash, expires_at, used_at, revoked_at)：只存 token 的 sha256
-- `proposals`(kind: rename|relabel|stage|state, payload, status) 和 `proposal_responses`：成员只能看到自己的回应
-- `relationship_history`(from_stage, to_stage, happened_on)
+| 表 | 说明 | 谁能读 |
+|---|---|---|
+| `profiles` | 称呼 | 自己，以及和我同在某个 US 的人 |
+| `us_spaces` | 名字、描述、标签、阶段、状态；**没有 owner 列** | 当前成员 |
+| `us_members` | 加入、离开时间，离开方式 | 当前成员 |
+| `my_us_prefs` | 我的排序和"收起" | 仅本人 |
+| `invitations` | 只存 token 的 sha256，一次性，7 天有效 | 当前成员（读不到 token） |
+| `proposals` / `proposal_responses` | 改名、改标签、改阶段、改状态，需要全员同意 | 当前成员 / 只能看自己的回应 |
+| `relationship_history` | 阶段变化及日期 | 当前成员 |
+| `memories` / `memory_media` | 文字、日期（精度：日/月/年）、地点、照片、声音 | 当前成员；作者永远能读自己写的 |
+| `perspectives` | 每人一个版本，可附声音，可"只给自己看" | 作者；其他人需**先写或跳过**才能读 |
+| `reveal_states` | 我是否已经解锁某段回忆 | 仅本人，且不可撤销 |
+| `seen_notes` / `seen_note_keeps` | 我看见的你 / 收件人的收藏 | 仅写的人和收的人 / 仅收件人 |
+| `prompts` | 40 个问题（其中 8 个"我看见的你"） | 已登录用户 |
+| `intentions` | 想做的事：只有我知道 / 我们一起 | 作者；"我们一起"的对当前成员可见 |
+| `push_subscriptions` | 每周提醒（可选） | 仅本人 |
 
-后续阶段：`memories`、`memory_media`(b)；`perspectives`、`reveal_states`、`seen_notes`、`seen_note_keeps`(c)；`prompts`、`intentions`(d)；`push_subscriptions` 与导出(e)。
+媒体存放在私有 bucket `media` 中，路径为 `{us}/{memory}/{file}`；回忆版本的声音放在 `{us}/{memory}/p/{file}`。文件只通过 30 分钟有效的签名链接访问，读取权限和对应数据行的权限完全一致。
 
 ## RLS 策略
 
@@ -52,5 +61,13 @@
 
 ## 页面
 
-登录 · 起名 · 我的人（首页）· 新建 US · US 主页 · 关于我们（描述、邀请、提议、关系历程、收起、离开）· 离开流程 · 邀请落地页 · 我
-后续：回忆详情/编辑、我的版本、我看见的你、收藏夹、想做的事、做到了、时间线、导出、每周提醒设置。
+登录 · 起名 · 我的人（每周问题 + US 列表）· 回答问题 / 写想做的事 · 想做的事 · 做到了 · 新建 US · US 主页（想做的事 + 时间线）· 关于我们（描述、邀请、提议、关系历程、收起、离开）· 离开流程 · 回忆：新建 / 详情（含各自的版本）/ 修改 · 我看见的你 · 收好的「我看见的你」· 导出 · 我（称呼、绑定邮箱、每周提醒、添加到主屏幕提示）· 邀请落地页
+
+## 补充的实现决定
+
+- **删除回忆**：如果别人在下面写了版本，就只清空正文、地点和媒体，保留空壳；否则整条删除。
+- **离开时"带走"**：删除我的回忆（必要时留空壳）、我写的版本、我写的纸条、我的想做的事，以及我的文件。别人写给我的纸条属于写的人，保留。合上状态下也可以带走。
+- **揭晓规则**：包括回忆作者在内，每个人都要先写自己的版本或跳过，才能看到别人的。
+- **"我们一起"的事**：任何成员都可以标记做到了，只有作者能"放下"。做到时可以存为回忆；私密的事还可以只留一句给自己。
+- **每周提醒**：服务器只发一个 `weekly` 信号，文字写在 App 里。每个设备每周最多一条，标记已发送之后才真正发送，所以重试也不会重复。404/410 的订阅会被自动清掉。
+- **安卓推送在大陆的限制**：安卓 Chrome 的推送依赖 Google 的服务，在大陆通常收不到。iOS（添加到主屏幕后）走 Apple 的推送服务，可以收到。App 不依赖推送也能完整使用。

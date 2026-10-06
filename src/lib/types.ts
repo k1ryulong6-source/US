@@ -131,3 +131,11 @@ export interface Intention {
   created_at: string;
   us_spaces?: { name: string } | null;
 }
+
+export interface TimelineIntention {
+  id: string;
+  body: string;
+  done_at: string;
+  memory_id: string | null;
+  created_at: string;
+}

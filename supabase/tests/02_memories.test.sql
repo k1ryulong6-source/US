@@ -23,10 +23,10 @@ end $$;
 \set guest2   '''e0000000-0000-4000-8000-0000000000e2'''
 
 insert into auth.users (id, email, is_anonymous, raw_user_meta_data) values
-  (:alice, 'alice@example.com', false, '{"display_name":"Alice"}'),
-  (:bob,   'bob@example.com',   false, '{"display_name":"Bob"}'),
-  (:carol, 'carol@example.com', false, '{"display_name":"Carol"}'),
-  (:dave,  'dave@example.com',  false, '{"display_name":"Dave"}'),
+  (:alice, 'alice@pgtap.test', false, '{"display_name":"Alice"}'),
+  (:bob,   'bob@pgtap.test',   false, '{"display_name":"Bob"}'),
+  (:carol, 'carol@pgtap.test', false, '{"display_name":"Carol"}'),
+  (:dave,  'dave@pgtap.test',  false, '{"display_name":"Dave"}'),
   (:guest2, null,               true,  '{}');
 
 -- US1: alice + bob (+ dave, who will leave). US2: carol + guest2.
