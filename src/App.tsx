@@ -12,6 +12,9 @@ import UsAbout from './pages/UsAbout';
 import LeaveUs from './pages/LeaveUs';
 import Invite from './pages/Invite';
 import Me from './pages/Me';
+import MemoryNew from './pages/MemoryNew';
+import MemoryDetail from './pages/MemoryDetail';
+import MemoryEdit from './pages/MemoryEdit';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { ready, session, profile } = useAuth();
@@ -35,6 +38,9 @@ export default function App() {
       <Route path="/us/:id" element={<RequireAuth><UsPage /></RequireAuth>} />
       <Route path="/us/:id/about" element={<RequireAuth><UsAbout /></RequireAuth>} />
       <Route path="/us/:id/leave" element={<RequireAuth><LeaveUs /></RequireAuth>} />
+      <Route path="/us/:id/m/new" element={<RequireAuth><MemoryNew /></RequireAuth>} />
+      <Route path="/us/:id/m/:mid" element={<RequireAuth><MemoryDetail /></RequireAuth>} />
+      <Route path="/us/:id/m/:mid/edit" element={<RequireAuth><MemoryEdit /></RequireAuth>} />
       <Route path="/me" element={<RequireAuth><Me /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -55,3 +55,32 @@ export interface HistoryEntry {
   happened_on: string | null;
   created_at: string;
 }
+
+export type DatePrecision = 'day' | 'month' | 'year';
+export type MediaKind = 'image' | 'audio';
+
+export interface Memory {
+  id: string;
+  us_id: string;
+  author_id: string | null;
+  body: string;
+  happened_on: string;
+  happened_precision: DatePrecision;
+  place: string;
+  author_removed: boolean;
+  created_at: string;
+  profiles?: { display_name: string } | null;
+  memory_media?: MemoryMedia[];
+}
+
+export interface MemoryMedia {
+  id: string;
+  memory_id: string;
+  kind: MediaKind;
+  storage_path: string;
+  mime: string;
+  width: number | null;
+  height: number | null;
+  duration_ms: number | null;
+  position: number;
+}

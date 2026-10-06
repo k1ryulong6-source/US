@@ -6,12 +6,27 @@ import { useUs } from '../lib/useUs';
 import { displayName, presetName } from '../lib/format';
 import { t } from '../strings';
 import BackLink from '../components/BackLink';
+import MemoryCard from '../components/MemoryCard';
+import { MEMORY_SELECT } from '../lib/memories';
+import type { Memory } from '../lib/types';
 
 export default function UsPage() {
   const { id } = useParams();
   const { session } = useAuth();
   const { space, members, missing } = useUs(id);
   const [proposalWaiting, setProposalWaiting] = useState(false);
+  const [memories, setMemories] = useState<Memory[] | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    supabase
+      .from('memories')
+      .select(MEMORY_SELECT)
+      .eq('us_id', id)
+      .order('happened_on', { ascending: false })
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setMemories((data as Memory[]) ?? []));
+  }, [id]);
 
   useEffect(() => {
     if (!id || !session) return;
@@ -70,9 +85,23 @@ export default function UsPage() {
         </ul>
       </section>
 
-      <section className="paper">
-        <p className="quiet center">{t.us.nothingYet}</p>
-      </section>
+      {space.state !== 'closed' && (
+        <Link to={`/us/${space.id}/m/new`} className="button primary self-start">
+          {t.memory.add}
+        </Link>
+      )}
+
+      {memories === null ? null : memories.length === 0 ? (
+        <section className="paper">
+          <p className="quiet center">{t.memory.empty}</p>
+        </section>
+      ) : (
+        <div className="stack">
+          {memories.map((m) => (
+            <MemoryCard key={m.id} memory={m} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
