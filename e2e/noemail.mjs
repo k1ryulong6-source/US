@@ -1,0 +1,17 @@
+import { BASE, launch, phone, SHOTS, FIXTURES } from './lib.mjs';
+const errors = [];
+const browser = await launch();
+const a = await phone(browser, errors, 'A');
+await a.goto(BASE + '/');
+await a.waitForURL(/login/);
+await a.click('text=先不用邮箱，直接开始');
+await a.getByText('大家怎么称呼你？').waitFor();
+await a.fill('input', '小试');
+await a.click('button.primary');
+await a.getByRole('link', { name: 'US', exact: true }).waitFor();
+await a.click('text=新建一个 US');
+await a.fill('input[maxlength="60"]', '试一试');
+await a.click('text=建好了');
+await a.locator('.page-sub', { hasText: '关于我们' }).waitFor();
+console.log('errors:', errors.length ? errors : 'none', '\nno-email OK');
+await browser.close();

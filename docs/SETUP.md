@@ -9,7 +9,7 @@ V1 的全部功能都已完成：登录、US、邀请、提议、回忆（照片
 适合先在自己手机上试。`*.pages.dev` 和 `*.supabase.co` 在大陆经常打不开，所以这种方式只在国外、或者开着代理时可用；确定要给大陆的朋友用，再按后面的完整步骤买域名。
 
 1. **Supabase**：新建项目（Region 选 Tokyo）。
-   - SQL Editor → New query → 粘贴全部 7 个迁移文件的内容（按文件名顺序，或用一次性合并好的文件）→ Run。只在新项目里运行一次。
+   - SQL Editor → New query → 粘贴全部 8 个迁移文件的内容（按文件名顺序；或运行 `scripts/db/combine.sh > all.sql` 得到一个合并好的文件）→ Run。只在新项目里运行一次。
    - Authentication → Sign In / Providers：Email 开启、关闭 "Confirm email"、OTP 长度 6；打开 **Allow anonymous sign-ins**。
    - Authentication → Emails → Templates：Magic Link、Confirm signup 换成 `supabase/templates/` 里对应的模板（邮件里才会有 6 位验证码）。
    - 不需要 SMTP：自带的发信服务能发给**你自己**（项目成员）的邮箱；朋友用邀请链接以访客身份进来，不需要邮箱。
@@ -31,7 +31,7 @@ V1 的全部功能都已完成：登录、US、邀请、提议、回忆（照片
 ## 1. 创建 Supabase 项目
 
 1. 新建项目，Region 选 **Northeast Asia (Tokyo)**。
-2. 建表：把 `supabase/migrations/` 里的 7 个 SQL 文件**按文件名顺序**粘贴到 **SQL Editor** 执行。这一步会自动建好私有的 `media` 存储桶和题库。
+2. 建表：把 `supabase/migrations/` 里的 8 个 SQL 文件**按文件名顺序**（或 `scripts/db/combine.sh` 合并出的一个文件）粘贴到 **SQL Editor** 执行。这一步会自动建好私有的 `media` 存储桶和题库。
    也可以用 CLI：
    ```bash
    npx supabase login
@@ -128,7 +128,7 @@ iOS 小提示：主屏幕上的 App 和 Safari 是**两个独立的存储**。�
 
 ## 6. 运行测试
 
-数据库权限测试共 197 条：
+数据库权限测试共 225 条：
 
 ```bash
 npx supabase start
@@ -139,6 +139,12 @@ npx supabase test db
 
 ```bash
 PGHOST=... PGPORT=... PGUSER=postgres npm run test:db:local
+```
+
+整条使用流程的端到端测试（Playwright，手机尺寸，只连本地，会清空本地数据库）见 [`e2e/README.md`](../e2e/README.md)：
+
+```bash
+cd e2e && npm install && npm test
 ```
 
 ## 7. 本地开发
