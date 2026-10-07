@@ -1207,7 +1207,6 @@ details > summary::-webkit-details-marker {
   font-weight: 400;
 }
 
-.login-page,
 .onboarding,
 .invite-page {
   display: flex;
@@ -1215,16 +1214,10 @@ details > summary::-webkit-details-marker {
   gap: 14px;
   padding-top: calc(28px + env(safe-area-inset-top));
 }
-.login-page .page-title,
 .onboarding .page-title,
 .invite-page .page-title {
   text-align: center;
   margin-top: 4px;
-}
-.login-mark {
-  width: min(52vw, 200px);
-  aspect-ratio: 1;
-  margin: 0 auto 6px;
 }
 /* a code to read off one screen and type into another */
 .move-code {
@@ -1234,10 +1227,6 @@ details > summary::-webkit-details-marker {
   letter-spacing: 0.18em;
   margin: 18px 0 6px;
   color: var(--ink);
-}
-.login-page .link.center-self {
-  align-self: center;
-  margin-top: 10px;
 }
 .move-input {
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
@@ -1579,4 +1568,118 @@ a.sheet-row {
   .splash-blot {
     mix-blend-mode: screen;
   }
+}
+
+/* ------------------------------------------------------------ the way in */
+
+/* the opening's last frame, then one wet drop to begin; everything else folded away */
+.login {
+  min-height: 100dvh;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: calc(9vh + env(safe-area-inset-top)) 28px calc(22px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.login-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.login-mark {
+  width: min(64vw, 250px);
+  aspect-ratio: 1;
+}
+.login-mark.small {
+  width: min(44vw, 170px);
+}
+.login-word {
+  margin: 4px 0 0;
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: 0.5em;
+  padding-left: 0.5em;
+  line-height: 1.2;
+}
+.login-intro {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.24em;
+  color: var(--ink-faint);
+}
+.login-body {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 28px 0;
+  animation: login-in 0.45s ease-out both;
+}
+@keyframes login-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.login-hint {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+  text-align: center;
+}
+.login-form {
+  width: 100%;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+.login-form input {
+  text-align: center;
+  letter-spacing: 0.06em;
+  border-bottom-style: dashed;
+  border-bottom-color: var(--pencil);
+}
+/* a code is written large and wide, like on a slip of paper */
+.login-form .code-input {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 26px;
+  letter-spacing: 0.5em;
+  padding-left: 0.5em;
+}
+.login-form .move-input {
+  font-size: 20px;
+  letter-spacing: 0.25em;
+  padding-left: 0.25em;
+}
+/* a wet drop and a word: something to do now */
+.drop-action {
+  padding: 10px 14px;
+  border-radius: 0;
+}
+.drop-action-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 16px;
+  letter-spacing: 0.4em;
+}
+.login-other {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.login-other .link {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  padding: 8px 0;
 }

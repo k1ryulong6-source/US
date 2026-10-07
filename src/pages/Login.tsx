@@ -1,10 +1,12 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { t } from '../strings';
 import ErrorNote from '../components/ErrorNote';
 import Wash from '../components/Wash';
+import WetDrop from '../components/WetDrop';
+import { meetingDrops, splashColors } from '../components/Splash';
 import { arrive, forgetParked, formatCode, moveStatus, readParked, takeBack, type Parked } from '../lib/transfer';
 
 function safeNext(raw: string | null): string {
@@ -20,7 +22,12 @@ export default function Login() {
 
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
-  const [step, setStep] = useState<'email' | 'code' | 'move'>('email');
+  const [step, setStep] = useState<'start' | 'email' | 'code' | 'move'>('start');
+  const colors = useMemo(splashColors, []);
+  const go = (next: typeof step) => {
+    setError(null);
+    setStep(next);
+  };
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // moving: this device handed its identity to another one (lib/transfer.ts)
@@ -85,16 +92,23 @@ export default function Login() {
   if (parked) {
     const until = new Date(parked.expiresAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     return (
-      <div className="page narrow login-page">
-        <h1 className="page-title">{t.move.waitingTitle}</h1>
-        <p className="quiet center small">{t.move.waitingHint}</p>
-        <p className="move-code" aria-label={t.move.codeLabel}>
-          {formatCode(parked.code)}
-        </p>
-        <p className="quiet center small">{t.move.until(until)}</p>
-        <button type="button" className="link center-self" disabled={busy} onClick={cancelMove}>
-          {t.move.cancel}
-        </button>
+      <div className="login">
+        <div className="login-head">
+          <Wash className="login-mark small" drops={meetingDrops(colors)} seed={2.2} flow={0.05} />
+          <h1 className="login-intro">{t.move.waitingTitle}</h1>
+        </div>
+        <div className="login-body">
+          <p className="login-hint">{t.move.waitingHint}</p>
+          <p className="move-code" aria-label={t.move.codeLabel}>
+            {formatCode(parked.code)}
+          </p>
+          <p className="login-hint">{t.move.until(until)}</p>
+        </div>
+        <nav className="login-other">
+          <button type="button" className="link quiet" disabled={busy} onClick={cancelMove}>
+            {t.move.cancel}
+          </button>
+        </nav>
       </div>
     );
   }
@@ -125,111 +139,137 @@ export default function Login() {
     setStep('code');
   }
 
-  async function verify(e: FormEvent) {
-    e.preventDefault();
+  async function verify(token: string) {
+    if (busy) return;
     setBusy(true);
     setError(null);
     const { error } = await supabase.auth.verifyOtp({
       email: email.trim(),
-      token: code.trim(),
+      token: token.trim(),
       type: 'email',
     });
     setBusy(false);
-    if (error) setError(t.login.invalidCode);
+    if (error) {
+      setCode('');
+      setError(t.login.invalidCode);
+    }
     // On success the auth listener updates the session and we redirect above.
   }
 
-  return (
-    <div className="page narrow login-page">
-      {/* two colours meeting: what US is */}
-      <Wash
-        className="login-mark"
-        drops={[
-          { x: -0.25, y: -0.22, r: 0.66, color: '#E2B21F', alpha: 0.85 },
-          { x: 0.26, y: 0.27, r: 0.64, color: '#2779BE', alpha: 0.8 },
-        ]}
-        seed={2.2}
-      />
-      <h1 className="page-title">{t.login.title}</h1>
-      <p className="quiet center small">{t.login.intro}</p>
-      {moved && <p className="center small">{t.move.moved}</p>}
+  const drop = (label: string, wet = true) => (
+    <span className="drop-action-inner">
+      {wet && <WetDrop color={colors[0]} size={22} />}
+      <span>{label}</span>
+    </span>
+  );
 
-      {step === 'move' ? (
-        <form onSubmit={submitMoveCode} className="stack form-column">
-          <label className="field">
-            <span>{t.move.codeLabel}</span>
-            <input
-              className="move-input"
-              autoCapitalize="characters"
-              autoComplete="off"
-              spellCheck={false}
-              maxLength={12}
-              required
-              value={moveCode}
-              placeholder="ABCD-EFGH"
-              onChange={(e) => setMoveCode(e.target.value)}
-            />
-          </label>
-          <button className="primary" disabled={busy}>
-            {busy ? t.move.arriving : t.move.arrive}
-          </button>
-          <button type="button" className="link" onClick={() => setStep('email')}>
-            {t.common.back}
-          </button>
-        </form>
-      ) : step === 'email' ? (
-        <form onSubmit={sendCode} className="stack form-column">
-          <label className="field">
-            <span>{t.login.emailLabel}</span>
+  return (
+    <div className="login">
+      {/* the opening's last frame: two colours that have met, and US in ink */}
+      <div className="login-head">
+        <Wash className="login-mark" drops={meetingDrops(colors)} seed={2.2} flow={0.05} />
+        <h1 className="login-word" aria-label={t.login.title}>
+          US
+        </h1>
+        <p className="login-intro">{t.login.intro}</p>
+      </div>
+
+      <div className="login-body" key={step}>
+        {moved && <p className="center small">{t.move.moved}</p>}
+
+        {step === 'start' && !session && (
+          <>
+            <button type="button" className="drop-action" disabled={busy} onClick={startAsGuest}>
+              {drop(t.login.start)}
+            </button>
+            <p className="login-hint">{t.login.startHint}</p>
+          </>
+        )}
+
+        {step === 'email' && (
+          <form onSubmit={sendCode} className="login-form">
             <input
               type="email"
               inputMode="email"
               autoComplete="email"
               required
+              aria-label={t.login.emailLabel}
               value={email}
-              placeholder={t.login.emailPlaceholder}
+              placeholder={t.login.emailLabel}
               onChange={(e) => setEmail(e.target.value)}
             />
-          </label>
-          <button className="primary" disabled={busy}>
-            {busy ? t.login.sending : t.login.sendCode}
-          </button>
-          {!session && (
-            <div className="stack-sm">
-              <button type="button" className="link" disabled={busy} onClick={startAsGuest}>
-                {t.login.noEmail}
-              </button>
-              <p className="quiet small">{t.login.noEmailHint}</p>
-            </div>
-          )}
-          <button type="button" className="link" disabled={busy} onClick={() => setStep('move')}>
-            {t.move.have}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={verify} className="stack form-column">
-          <p className="quiet">{t.login.codeSent(email)}</p>
-          <label className="field">
-            <span>{t.login.codeLabel}</span>
+            <button className="drop-action" disabled={busy}>
+              {drop(busy ? t.login.sending : t.login.sendCode)}
+            </button>
+          </form>
+        )}
+
+        {step === 'code' && (
+          <form onSubmit={(e) => (e.preventDefault(), void verify(code))} className="login-form">
+            <p className="login-hint">{t.login.codeSent(email)}</p>
             <input
+              className="code-input"
               inputMode="numeric"
               autoComplete="one-time-code"
               pattern="[0-9]*"
-              maxLength={10}
+              maxLength={6}
               required
+              aria-label={t.login.codeLabel}
+              placeholder="······"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, '').slice(0, 6);
+                setCode(v);
+                // six digits is the whole code: go straight in
+                if (v.length === 6) void verify(v);
+              }}
             />
-          </label>
-          <button className="primary" disabled={busy}>
-            {busy ? t.login.verifying : t.login.verify}
+            {busy && <p className="login-hint">{t.login.verifying}</p>}
+          </form>
+        )}
+
+        {step === 'move' && (
+          <form onSubmit={submitMoveCode} className="login-form">
+            <p className="login-hint">{t.move.codeLabel}</p>
+            <input
+              className="code-input move-input"
+              autoCapitalize="characters"
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={12}
+              required
+              aria-label={t.move.codeLabel}
+              value={moveCode}
+              placeholder="ABCD-EFGH"
+              onChange={(e) => setMoveCode(e.target.value)}
+            />
+            <button className="drop-action" disabled={busy}>
+              {drop(busy ? t.move.arriving : t.move.arrive)}
+            </button>
+          </form>
+        )}
+
+        <ErrorNote show={Boolean(error)} text={error ?? undefined} />
+      </div>
+
+      {/* the other ways in, folded away */}
+      <nav className="login-other">
+        {step === 'start' ? (
+          <>
+            <button type="button" className="link quiet" onClick={() => go('email')}>
+              {t.login.withEmail}
+            </button>
+            <span aria-hidden="true">·</span>
+            <button type="button" className="link quiet" onClick={() => go('move')}>
+              {t.move.have}
+            </button>
+          </>
+        ) : (
+          <button type="button" className="link quiet" onClick={() => go(step === 'code' ? 'email' : 'start')}>
+            {step === 'code' ? t.login.changeEmail : t.common.back}
           </button>
-          <button type="button" className="link" onClick={() => setStep('email')}>
-            {t.login.changeEmail}
-          </button>
-        </form>
-      )}
-      <ErrorNote show={Boolean(error)} text={error ?? undefined} />
+        )}
+      </nav>
     </div>
   );
 }

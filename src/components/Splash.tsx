@@ -17,6 +17,14 @@ const FALLBACK: [string, string] = ['#E2B21F', '#2779BE'];
 const FIRST = { x: -0.25, y: -0.22, r: 0.66 };
 const SECOND = { x: 0.26, y: 0.27, r: 0.64 };
 
+/** The two drops as they lie once they've met: the opening's last frame, and the login mark. */
+export function meetingDrops([c1, c2]: [string, string]) {
+  return [
+    { ...FIRST, color: c1, alpha: 0.86 },
+    { ...SECOND, color: c2, alpha: 0.82 },
+  ];
+}
+
 // ms from start
 const SECOND_LANDS = 380;
 const WORD_SOAKS = 1000;
@@ -32,7 +40,7 @@ export function rememberSplashColors(colors: string[]) {
   }
 }
 
-function splashColors(): [string, string] {
+export function splashColors(): [string, string] {
   try {
     const c = JSON.parse(localStorage.getItem(COLORS_KEY) ?? 'null') as string[] | null;
     if (Array.isArray(c) && typeof c[0] === 'string') {

@@ -4,7 +4,7 @@ const browser = await launch();
 const a = await phone(browser, errors, 'A');
 await a.goto(BASE + '/');
 await a.waitForURL(/login/);
-await a.click('text=先不用邮箱，直接开始');
+await a.getByRole('button', { name: '开始', exact: true }).click();
 await a.getByText('大家怎么称呼你？').waitFor();
 await a.fill('input', '小试');
 await a.click('button.primary');

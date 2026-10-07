@@ -44,10 +44,11 @@ export async function login(page, email, name) {
   await fetch(`${MAIL}/messages`, { method: 'DELETE' });
   await page.goto(BASE + '/');
   await page.waitForURL(/login/);
+  await page.click('text=用邮箱登录');
   await page.fill('input[type=email]', email);
-  await page.click('button.primary');
+  await page.click('text=发送验证码');
+  // six digits go straight in
   await page.fill('input[inputmode=numeric]', await codeFor(email));
-  await page.click('button.primary');
   if (name) {
     await page.getByText('大家怎么称呼你？').waitFor();
     await page.fill('input', name);
