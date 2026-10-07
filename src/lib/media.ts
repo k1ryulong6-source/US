@@ -115,3 +115,36 @@ export async function uploadPerspectiveAudio(usId: string, memoryId: string, ite
   if (up.error) throw up.error;
   return path;
 }
+
+/** Your own photo: avatars/{you}/… The previous file is removed once the new one is in place. */
+export async function setAvatar(userId: string, file: File | null, previous?: string | null) {
+  let path: string | null = null;
+  if (file) {
+    const img = await compressImage(file, 1024);
+    path = `avatars/${userId}/${crypto.randomUUID()}.jpg`;
+    const up = await supabase.storage.from(BUCKET).upload(path, img.blob, { contentType: 'image/jpeg', upsert: false });
+    if (up.error) throw up.error;
+  }
+  const { error } = await supabase.from('profiles').update({ avatar_path: path }).eq('id', userId);
+  if (error) {
+    if (path) await removeFiles([path]);
+    throw error;
+  }
+  if (previous) await removeFiles([previous]).catch(() => undefined);
+}
+
+/** A relationship's photo: covers/{us}/… Any current member may change it; everyone sees the same one. */
+export async function setCover(usId: string, file: File | null) {
+  let path: string | null = null;
+  if (file) {
+    const img = await compressImage(file, 1600);
+    path = `covers/${usId}/${crypto.randomUUID()}.jpg`;
+    const up = await supabase.storage.from(BUCKET).upload(path, img.blob, { contentType: 'image/jpeg', upsert: false });
+    if (up.error) throw up.error;
+  }
+  const { error } = await supabase.rpc('set_us_cover', { p_us: usId, p_path: path });
+  if (error) {
+    if (path) await removeFiles([path]);
+    throw error;
+  }
+}

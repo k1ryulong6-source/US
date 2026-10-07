@@ -47,11 +47,14 @@ export interface Bead {
 }
 
 export interface Soak {
-  image: HTMLImageElement;
+  /** the photo, already cropped square (a canvas, so the crop is done once) */
+  image: HTMLCanvasElement;
   /** viewport rect [x, y, w, h] the photo is mapped onto */
   rect: [number, number, number, number];
   /** which wash (index into washes) it soaks into */
   wash: number;
+  /** how strongly the photo shows, and how much of the wash's own pigment stays on it */
+  k?: [number, number];
 }
 
 export interface Scene {
@@ -78,7 +81,7 @@ const FS = [
   'uniform vec4 uD[32];uniform vec4 uDK[32];uniform vec4 uDS[32];uniform vec4 uDG[32];uniform vec4 uDG2[32];',
   'uniform vec4 uBloom[4];uniform vec3 uPaper;uniform vec3 uBead;uniform vec3 uBeadK;',
   'uniform vec4 uRib[16];uniform int uNR;uniform vec3 uRibK1;uniform vec3 uRibK2;uniform float uRibTop;',
-  'uniform sampler2D uPhoto;uniform vec4 uPhotoRect;uniform int uPhotoG;',
+  'uniform sampler2D uPhoto;uniform vec4 uPhotoRect;uniform int uPhotoG;uniform vec2 uPhotoK;',
   'uniform vec2 uScroll;uniform float uDark;uniform vec3 uPaperDark;',
   'vec2 hash(vec2 p){p=vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));return -1.+2.*fract(sin(p)*43758.5453123);}',
   'float noise(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);',
@@ -157,8 +160,8 @@ const FS = [
   // a photo soaked into the wash: it shows where the paint is, the wet edge stays paint
   ' if(uPhotoG>=0){vec2 uv=(p-uPhotoRect.xy)/uPhotoRect.zw;',
   '  if(uv.x>0.&&uv.y>0.&&uv.x<1.&&uv.y<1.){vec3 ph=texture2D(uPhoto,uv).rgb;',
-  '   float m=smoothstep(.22,.75,pm);vec3 odp=-log(max(ph,vec3(.04)))*.5;',
-  '   col=uPaper*paper*exp(-mix(od,odp+od*.45,m));}}',
+  '   float m=smoothstep(.22,.75,pm);vec3 odp=-log(max(ph,vec3(.04)))*uPhotoK.x;',
+  '   col=uPaper*paper*exp(-mix(od,odp+od*uPhotoK.y,m));}}',
   ' if(uBead.z>0.){vec2 bd=p-uBead.xy;float br=uBead.z;vec2 n=normalize(bd+1e-4);',
   '  float jag=1.+.22*fbm3(n*1.3+vec2(3.,1.))+.02*sin(uTime*.9+atan(bd.y,bd.x)*2.);',
   '  float d=length(bd*vec2(1.,1.18))/(br*jag);',
@@ -197,8 +200,8 @@ export class Painter {
   private aR = new Float32Array(MAX_RIBBON * 4);
   private aB = new Float32Array(16);
   private tex: WebGLTexture | null = null;
-  private texImage: HTMLImageElement | null = null;
-  private failed = new WeakSet<HTMLImageElement>();
+  private texImage: HTMLCanvasElement | null = null;
+  private failed = new WeakSet<HTMLCanvasElement>();
 
   static create(canvas: HTMLCanvasElement): Painter | null {
     const gl = canvas.getContext('webgl', { premultipliedAlpha: false, antialias: false, alpha: false });
@@ -232,7 +235,7 @@ export class Painter {
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     for (const n of ['uRes', 'uDpr', 'uTime', 'uN', 'uD', 'uDK', 'uDS', 'uDG', 'uDG2', 'uBloom', 'uPaper', 'uBead',
-      'uBeadK', 'uRib', 'uNR', 'uRibK1', 'uRibK2', 'uRibTop', 'uPhoto', 'uPhotoRect', 'uPhotoG', 'uScroll', 'uDark',
+      'uBeadK', 'uRib', 'uNR', 'uRibK1', 'uRibK2', 'uRibTop', 'uPhoto', 'uPhotoRect', 'uPhotoG', 'uPhotoK', 'uScroll', 'uDark',
       'uPaperDark']) {
       this.u[n] = gl.getUniformLocation(pr, n);
     }
@@ -309,15 +312,16 @@ export class Painter {
     gl.uniform4fv(u.uBloom, this.aB);
 
     const soak = o.scene.soak;
-    if (soak && soak.image.complete && soak.image.naturalWidth > 0 && this.upload(soak.image)) {
+    if (soak && soak.image.width > 0 && this.upload(soak.image)) {
       gl.uniform4fv(u.uPhotoRect, soak.rect);
+      gl.uniform2fv(u.uPhotoK, soak.k ?? [0.5, 0.45]);
       gl.uniform1i(u.uPhotoG, soak.wash);
     } else gl.uniform1i(u.uPhotoG, -1);
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
-  private upload(img: HTMLImageElement): boolean {
+  private upload(img: HTMLCanvasElement): boolean {
     const { gl } = this;
     if (this.texImage === img) return true;
     if (this.failed.has(img)) return false;
@@ -334,12 +338,13 @@ export class Painter {
     } catch {
       // a photo served without CORS headers cannot be painted; the wash simply stays paint
       this.failed.add(img);
+      img.dispatchEvent(new Event('soakfailed'));
       return false;
     }
   }
 
+  /** Stop using the context. It is not force-lost: React may mount the same canvas again. */
   dispose() {
-    const ext = this.gl.getExtension('WEBGL_lose_context');
-    ext?.loseContext();
+    this.gl.useProgram(null);
   }
 }

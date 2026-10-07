@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
@@ -6,7 +6,10 @@ import { useUs } from '../lib/useUs';
 import { displayName, formatDate } from '../lib/format';
 import type { SeenNote } from '../lib/types';
 import { t } from '../strings';
-import BackLink from '../components/BackLink';
+import { Link } from 'react-router-dom';
+import { usColors } from '../lib/palette';
+import Wash from '../components/Wash';
+import { BackChevron, PencilLoop } from '../components/Pencil';
 import ErrorNote from '../components/ErrorNote';
 
 export default function SeenNotes() {
@@ -21,6 +24,10 @@ export default function SeenNotes() {
   const [body, setBody] = useState('');
   const [given, setGiven] = useState(false);
   const [failed, setFailed] = useState(false);
+  const colors = useMemo(
+    () => usColors(members.map((m) => ({ user_id: m.user_id, color: m.profiles?.color })), me),
+    [members, me],
+  );
 
   const load = useCallback(async () => {
     const [n, k] = await Promise.all([
@@ -45,6 +52,18 @@ export default function SeenNotes() {
   const fromMe = notes.filter((n) => n.from_id === me);
   const target = to ?? (others.length === 1 ? others[0].user_id : null);
   const closed = space.state === 'closed';
+  // each note carries a small fleck of its writer's colour
+  const fleck = (uid: string, seed: number) => (
+    <Wash
+      className="fleck note-fleck"
+      drops={[
+        { x: 0, y: 0, r: 0.78, color: colors.get(uid) ?? '#9C9488', alpha: 0.9, aspect: 1.15, angle: -0.5 },
+        { x: 0.95, y: 0.75, r: 0.2, color: colors.get(uid) ?? '#9C9488', alpha: 0.85 },
+      ]}
+      seed={seed}
+      flow={0.05}
+    />
+  );
 
   async function give(e: FormEvent) {
     e.preventDefault();
@@ -74,10 +93,15 @@ export default function SeenNotes() {
   }
 
   return (
-    <div className="stack-lg">
-      <BackLink to={`/us/${id}`} />
-      <header className="stack-sm">
-        <h1 className="title">{t.seen.title}</h1>
+    <div className="seen-page">
+      <div className="topbar">
+        <Link to={`/us/${id}`} className="icon-link" aria-label={t.common.back}>
+          <BackChevron />
+        </Link>
+      </div>
+      <header className="page-head">
+        <h1 className="page-title">{t.seen.title}</h1>
+        <p className="page-sub">{space.name}</p>
         {prompt && <p className="question-body">{prompt}</p>}
         <p className="quiet">{t.seen.intro}</p>
       </header>
@@ -86,7 +110,9 @@ export default function SeenNotes() {
         (others.length === 0 ? (
           <p className="note">{t.seen.nobody}</p>
         ) : (
-          <form onSubmit={give} className="stack-sm">
+          <form onSubmit={give} className="seen-note seen-write">
+            <PencilLoop width={30} height={26} seed={`seen-${id}`} />
+            <div className="seen-note-text">
             {others.length > 1 && (
               <div className="field">
                 <span>{t.seen.to}</span>
@@ -121,21 +147,27 @@ export default function SeenNotes() {
               {t.seen.give}
             </button>
             {given && <span className="quiet small">{t.seen.given}</span>}
+            </div>
           </form>
         ))}
 
       <section className="stack-sm">
         <h2 className="subtitle">{t.seen.toMe}</h2>
         {toMe.length === 0 && <p className="quiet small">{t.seen.noneToMe}</p>}
-        {toMe.map((n) => (
-          <div key={n.id} className="paper stack-sm note-card">
-            <span className="quiet small">
-              {t.seen.from(nameOf(n.from_id))} · {formatDate(n.created_at)}
-            </span>
-            <p className="pre">{n.body}</p>
-            <button className="link" onClick={() => toggleKeep(n.id)}>
-              {kept.has(n.id) ? t.seen.kept : t.seen.keep}
-            </button>
+        {toMe.map((n, i) => (
+          <div key={n.id} className="seen-note">
+            {fleck(n.from_id, i * 1.3 + 1.1)}
+            <div className="seen-note-text">
+              <p className="pre">{n.body}</p>
+              <div className="row between">
+                <span className="quiet small">
+                  {t.seen.from(nameOf(n.from_id))} · {formatDate(n.created_at)}
+                </span>
+                <button className={kept.has(n.id) ? 'link quiet' : 'link'} onClick={() => toggleKeep(n.id)}>
+                  {kept.has(n.id) ? t.seen.kept : t.seen.keep}
+                </button>
+              </div>
+            </div>
           </div>
         ))}
       </section>
@@ -143,17 +175,22 @@ export default function SeenNotes() {
       {fromMe.length > 0 && (
         <section className="stack-sm">
           <h2 className="subtitle">{t.seen.fromMe}</h2>
-          {fromMe.map((n) => (
-            <div key={n.id} className="stack-sm perspective">
-              <span className="quiet small">
-                {t.seen.toWhom(nameOf(n.to_id))} · {formatDate(n.created_at)}
-              </span>
-              <p className="pre">{n.body}</p>
-              {!closed && (
-                <button className="link" onClick={() => takeBack(n.id)}>
-                  {t.seen.takeBack}
-                </button>
-              )}
+          {fromMe.map((n, i) => (
+            <div key={n.id} className="seen-note">
+              {fleck(me, i * 1.3 + 3.7)}
+              <div className="seen-note-text">
+                <p className="pre">{n.body}</p>
+                <div className="row between">
+                  <span className="quiet small">
+                    {t.seen.toWhom(nameOf(n.to_id))} · {formatDate(n.created_at)}
+                  </span>
+                  {!closed && (
+                    <button className="link quiet" onClick={() => takeBack(n.id)}>
+                      {t.seen.takeBack}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           ))}
         </section>

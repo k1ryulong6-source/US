@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { MAX_DROPS, Painter, type Bead, type Bloom, type Ribbon, type Scene, type Wash } from '../lib/watercolour';
 
 /**
@@ -8,7 +8,9 @@ import { MAX_DROPS, Painter, type Bead, type Bloom, type Ribbon, type Scene, typ
  */
 
 export interface Piece {
-  washes?: (Wash & { soak?: { image: HTMLImageElement; rect: [number, number, number, number] } | null })[];
+  washes?: (Wash & {
+    soak?: { image: HTMLCanvasElement; rect: [number, number, number, number]; k?: [number, number] } | null;
+  })[];
   ribbon?: Ribbon | null;
   bead?: Bead | null;
 }
@@ -26,6 +28,8 @@ interface PaperApi {
 }
 
 const PaperContext = createContext<PaperApi>({ register: () => () => undefined, bloom: () => undefined });
+/** false when there is no WebGL: elements then show plain fallbacks (e.g. an ordinary photo). */
+const CanPaint = createContext(true);
 
 const PAPER = '#F7F3EB';
 const PAPER_DARK = '#1F1C19';
@@ -35,6 +39,7 @@ export function PaperProvider({ children }: { children: ReactNode }) {
   const entries = useRef(new Set<Entry>());
   const blooms = useRef<Bloom[]>([]);
   const clock = useRef(0);
+  const [canPaint, setCanPaint] = useState(true);
   const api = useRef<PaperApi>({
     register(entry) {
       entries.current.add(entry);
@@ -52,6 +57,7 @@ export function PaperProvider({ children }: { children: ReactNode }) {
     const painter = Painter.create(el);
     if (!painter) {
       el.style.display = 'none'; // no WebGL: the CSS paper colour carries the page
+      setCanPaint(false);
       return;
     }
     const dark = matchMedia('(prefers-color-scheme: dark)');
@@ -80,7 +86,7 @@ export function PaperProvider({ children }: { children: ReactNode }) {
           if (w.y + 2 * w.s < 0 || w.y - 2 * w.s > vh) continue;
           if (drops + w.drops.length > MAX_DROPS) continue;
           drops += w.drops.length;
-          if (w.soak) scene.soak = { image: w.soak.image, rect: w.soak.rect, wash: scene.washes.length };
+          if (w.soak) scene.soak = { ...w.soak, wash: scene.washes.length };
           scene.washes.push(w);
         }
         if (piece.ribbon) scene.ribbon = piece.ribbon;
@@ -109,8 +115,10 @@ export function PaperProvider({ children }: { children: ReactNode }) {
 
   return (
     <PaperContext.Provider value={api.current}>
-      <canvas ref={canvas} className="paper-canvas" aria-hidden="true" />
-      {children}
+      <CanPaint.Provider value={canPaint}>
+        <canvas ref={canvas} className="paper-canvas" aria-hidden="true" />
+        {children}
+      </CanPaint.Provider>
     </PaperContext.Provider>
   );
 }
@@ -127,4 +135,8 @@ export function usePaint(el: RefObject<Element | null>, paint: Painting) {
 
 export function useBloom() {
   return useContext(PaperContext).bloom;
+}
+
+export function useCanPaint() {
+  return useContext(CanPaint);
 }

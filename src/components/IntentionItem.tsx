@@ -21,14 +21,12 @@ export default function IntentionItem({ intention: i, me, showUs, onChange }: Pr
 
   return (
     <div className="intention">
+      <p className="pre intention-body">{i.body}</p>
       <span className="quiet small">
-        {[showUs && i.us_spaces ? t.intention.inUs(i.us_spaces.name) : '', t.intention.visibility[i.visibility]]
-          .filter(Boolean)
-          .join(' · ')}
+        {[showUs && i.us_spaces ? i.us_spaces.name : '', t.intention.visibility[i.visibility]].filter(Boolean).join(' · ')}
       </span>
-      <p className="pre">{i.body}</p>
       {i.done_note && <p className="quiet pre small">{i.done_note}</p>}
-      <div className="row">
+      <div className="row intention-actions">
         {i.status === 'open' && (
           <>
             <Link to={`/intentions/${i.id}/done`} className="link">

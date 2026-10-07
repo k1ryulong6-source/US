@@ -6,6 +6,13 @@ import { t } from '../strings';
 import ErrorNote from '../components/ErrorNote';
 import ReminderSettings from '../components/ReminderSettings';
 import { disableReminder, isIos, isStandalone } from '../lib/push';
+import { setAvatar } from '../lib/media';
+import { useSignedUrls } from '../lib/useSignedUrls';
+import { PALETTE, colorOf } from '../lib/palette';
+import { CLEAR_WATER } from '../lib/washes';
+import Wash from '../components/Wash';
+import PhotoSheet from '../components/PhotoSheet';
+import { PencilCamera, PencilLoop } from '../components/Pencil';
 
 export default function Me() {
   const { session, profile, isGuest, refreshProfile } = useAuth();
@@ -15,12 +22,16 @@ export default function Me() {
   const [code, setCode] = useState('');
   const [bindStep, setBindStep] = useState<'email' | 'code' | 'done'>('email');
   const [error, setError] = useState<string | null>(null);
+  const [sheet, setSheet] = useState(false);
+  const avatar = useSignedUrls(profile?.avatar_path ? [profile.avatar_path] : []);
 
   useEffect(() => {
     if (profile) setName(profile.display_name);
   }, [profile]);
 
   if (!session || !profile) return null;
+  const mine = colorOf(session.user.id, profile.color);
+  const avatarUrl = profile.avatar_path ? avatar[profile.avatar_path] : null;
 
   async function saveName(e: FormEvent) {
     e.preventDefault();
@@ -53,6 +64,23 @@ export default function Me() {
     setBindStep('done');
   }
 
+  async function chooseColor(hex: string) {
+    const { error } = await supabase.from('profiles').update({ color: hex }).eq('id', session!.user.id);
+    setError(error ? t.common.somethingWrong : null);
+    if (!error) await refreshProfile();
+  }
+
+  async function changeAvatar(file: File | null) {
+    setSheet(false);
+    try {
+      await setAvatar(session!.user.id, file, profile?.avatar_path);
+      setError(null);
+      await refreshProfile();
+    } catch {
+      setError(t.photo.failed);
+    }
+  }
+
   async function signOut() {
     if (isGuest && !window.confirm(t.me.signOutGuestWarn)) return;
     // This device should not keep reminding the next person who signs in.
@@ -61,8 +89,47 @@ export default function Me() {
   }
 
   return (
-    <div className="stack-lg">
-      <h1 className="title">{t.me.title}</h1>
+    <div className="me-page">
+      <h1 className="sr-only">{t.me.title}</h1>
+      {/* your colour: it is how you appear in every US */}
+      <Wash
+        className="me-wash"
+        drops={[
+          { x: -0.12, y: -0.1, r: 0.66, color: mine, alpha: 0.9 },
+          { x: 0.32, y: 0.3, r: 0.4, color: mine, alpha: 0.85 },
+        ]}
+        seed={1.9}
+      />
+      <p className="me-name">{profile.display_name}</p>
+      <div className="palette" role="radiogroup" aria-label={t.me.color}>
+        {PALETTE.map((p, i) => (
+          <button
+            key={p.hex}
+            type="button"
+            role="radio"
+            aria-checked={p.hex === mine}
+            aria-label={p.name}
+            className="swatch"
+            onClick={() => void chooseColor(p.hex)}
+          >
+            <Wash className="swatch-paint" drops={[{ x: 0, y: 0, r: 0.82, color: p.hex, alpha: 0.9 }]} seed={4 + i} flow={0.05} />
+            {p.hex === mine && <PencilLoop width={36} height={36} seed="chosen" />}
+          </button>
+        ))}
+      </div>
+      <p className="center small quiet">{t.me.color}</p>
+
+      <div className="me-list">
+        <button type="button" className="me-row" onClick={() => setSheet(true)}>
+          <span>{t.photo.avatar}</span>
+          <span className="avatar">
+            {avatarUrl ? (
+              <Wash className="avatar-wash" drops={CLEAR_WATER} photo={avatarUrl} photoK={[0.95, 0.1]} seed={9.9} flow={0.04} />
+            ) : (
+              <PencilCamera size={22} />
+            )}
+          </span>
+        </button>
 
       <form onSubmit={saveName} className="stack-sm">
         <label className="field">
@@ -132,9 +199,21 @@ export default function Me() {
         {t.me.export}
       </Link>
 
-      <button className="link" onClick={signOut}>
+      <button className="link quiet" onClick={signOut}>
         {t.me.signOut}
       </button>
+      </div>
+
+      {sheet && (
+        <PhotoSheet
+          title={t.photo.avatar}
+          facing="user"
+          canRemove={Boolean(profile.avatar_path)}
+          onPick={(f) => void changeAvatar(f)}
+          onRemove={() => void changeAvatar(null)}
+          onClose={() => setSheet(false)}
+        />
+      )}
     </div>
   );
 }

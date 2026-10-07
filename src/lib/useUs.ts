@@ -12,12 +12,12 @@ export function useUs(id: string | undefined) {
     const [{ data: s }, { data: m }] = await Promise.all([
       supabase
         .from('us_spaces')
-        .select('id, name, description, preset_label, stage, state')
+        .select('id, name, description, preset_label, stage, state, cover_path')
         .eq('id', id)
         .maybeSingle(),
       supabase
         .from('us_members')
-        .select('user_id, joined_at, left_at, profiles!us_members_user_id_fkey(display_name)')
+        .select('user_id, joined_at, left_at, profiles!us_members_user_id_fkey(display_name, color, avatar_path)')
         .eq('us_id', id)
         .is('left_at', null)
         .order('joined_at', { ascending: true }),

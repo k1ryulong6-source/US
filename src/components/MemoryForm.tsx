@@ -7,6 +7,7 @@ import { t } from '../strings';
 import ErrorNote from './ErrorNote';
 import MediaView from './MediaView';
 import VoiceRecorder from './VoiceRecorder';
+import { PencilAlbum, PencilCamera } from './Pencil';
 
 const PRECISIONS: DatePrecision[] = ['day', 'month', 'year'];
 
@@ -96,7 +97,7 @@ export default function MemoryForm({ usId, existing, initialBody = '', submitLab
   }
 
   return (
-    <form onSubmit={submit} className="stack">
+    <form onSubmit={submit} className="stack memory-form">
       <label className="field">
         <span>{t.memory.bodyLabel}</span>
         <textarea
@@ -175,10 +176,19 @@ export default function MemoryForm({ usId, existing, initialBody = '', submitLab
           </div>
         )}
         {total < MAX_ATTACHMENTS && (
-          <label className="button secondary file-button">
-            {t.memory.addPhotos}
-            <input type="file" accept="image/*" multiple onChange={onPhotos} />
-          </label>
+          <div className="photo-pick">
+            {/* "拍一张" opens the camera directly; the album lets you pick several */}
+            <label className="pencil-button">
+              <PencilCamera size={30} />
+              <span>{t.photo.take}</span>
+              <input type="file" accept="image/*" capture="environment" onChange={onPhotos} className="sr-only" />
+            </label>
+            <label className="pencil-button">
+              <PencilAlbum size={30} />
+              <span>{t.photo.pick}</span>
+              <input type="file" accept="image/*" multiple onChange={onPhotos} className="sr-only" />
+            </label>
+          </div>
         )}
       </div>
 
@@ -187,7 +197,7 @@ export default function MemoryForm({ usId, existing, initialBody = '', submitLab
         <VoiceRecorder onRecorded={onVoice} />
       </div>
 
-      <button className="primary" disabled={busy || (!body.trim() && total === 0)}>
+      <button className="primary center-self" disabled={busy || (!body.trim() && total === 0)}>
         {busy ? t.memory.saving : (submitLabel ?? t.memory.save)}
       </button>
       <ErrorNote show={Boolean(error)} text={error ?? undefined} />

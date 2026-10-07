@@ -7,6 +7,16 @@ export type LeaveMode = 'keep' | 'remove';
 export interface Profile {
   id: string;
   display_name: string;
+  /** one of PALETTE; null until chosen */
+  color?: string | null;
+  avatar_path?: string | null;
+}
+
+/** What a page needs to know about a person to paint them. */
+export interface PersonRef {
+  display_name: string;
+  color?: string | null;
+  avatar_path?: string | null;
 }
 
 export interface UsSpace {
@@ -16,6 +26,7 @@ export interface UsSpace {
   preset_label: UsPreset | null;
   stage: string | null;
   state: UsState;
+  cover_path?: string | null;
 }
 
 export interface MyUsListItem extends UsSpace {
@@ -27,7 +38,7 @@ export interface Member {
   user_id: string;
   joined_at: string;
   left_at: string | null;
-  profiles: { display_name: string } | null;
+  profiles: PersonRef | null;
 }
 
 export interface Invitation {
@@ -69,7 +80,7 @@ export interface Memory {
   place: string;
   author_removed: boolean;
   created_at: string;
-  profiles?: { display_name: string } | null;
+  profiles?: PersonRef | null;
   memory_media?: MemoryMedia[];
 }
 
@@ -95,7 +106,7 @@ export interface Perspective {
   audio_mime: string | null;
   audio_duration_ms: number | null;
   created_at: string;
-  profiles?: { display_name: string } | null;
+  profiles?: PersonRef | null;
 }
 
 export interface SeenNote {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 import { removeFiles, uploadPerspectiveAudio, type PreparedMedia } from '../lib/media';
 import { displayName, formatDuration } from '../lib/format';
@@ -7,35 +7,44 @@ import { t } from '../strings';
 import AudioClip from './AudioClip';
 import ErrorNote from './ErrorNote';
 import VoiceRecorder from './VoiceRecorder';
+import Wash from './Wash';
+import { PencilLoop } from './Pencil';
 
 interface Props {
   usId: string;
   memoryId: string;
   me: string;
   closed: boolean;
+  colorOf: (userId: string | null) => string;
+  /** whose versions are visible to me: their colours flow into the memory's wash */
+  onAuthors?: (ids: string[]) => void;
 }
 
 /**
  * "你记得的版本是？" — others' versions stay hidden (by RLS) until I write mine
  * or choose to skip. The UI never hints whether anyone else has written.
  */
-export default function Perspectives({ usId, memoryId, me, closed }: Props) {
+export default function Perspectives({ usId, memoryId, me, closed, colorOf, onAuthors }: Props) {
   const [revealed, setRevealed] = useState<boolean | null>(null);
   const [all, setAll] = useState<Perspective[]>([]);
   const [editing, setEditing] = useState(false);
   const [failed, setFailed] = useState(false);
+  const report = useRef(onAuthors);
+  report.current = onAuthors;
 
   const load = useCallback(async () => {
     const [rv, ps] = await Promise.all([
       supabase.from('reveal_states').select('memory_id').eq('memory_id', memoryId).maybeSingle(),
       supabase
         .from('perspectives')
-        .select('*, profiles!perspectives_author_id_fkey(display_name)')
+        .select('*, profiles!perspectives_author_id_fkey(display_name, color)')
         .eq('memory_id', memoryId)
         .order('created_at', { ascending: true }),
     ]);
     setRevealed(Boolean(rv.data));
-    setAll((ps.data as Perspective[]) ?? []);
+    const list = (ps.data as Perspective[]) ?? [];
+    setAll(list);
+    report.current?.(list.map((p) => p.author_id));
   }, [memoryId]);
 
   useEffect(() => {
@@ -76,8 +85,11 @@ export default function Perspectives({ usId, memoryId, me, closed }: Props) {
 
   if (!revealed) {
     return (
-      <section className="paper stack">
-        <h2 className="subtitle">{t.perspective.prompt}</h2>
+      <section className="versions">
+        <div className="version-ask">
+          <PencilLoop width={40} height={30} seed={memoryId} />
+          <h2 className="version-question">{t.perspective.prompt}</h2>
+        </div>
         {closed ? <p className="quiet small">{t.perspective.closedHint}</p> : <p className="quiet small">{t.perspective.hint}</p>}
         {!closed && form}
         <button className="link" onClick={skip}>
@@ -89,11 +101,12 @@ export default function Perspectives({ usId, memoryId, me, closed }: Props) {
   }
 
   return (
-    <section className="stack">
+    <section className="versions">
       {mine && !editing && (
-        <div className="paper stack-sm">
+        <div className="version">
           <div className="row between">
-            <span className="quiet small">
+            <span className="version-who">
+              <Wash className="fleck" drops={[{ x: 0, y: 0, r: 0.8, color: colorOf(me), alpha: 0.85 }]} seed={3.3} />
               {t.perspective.mine}
               {mine.is_private && ` · ${t.perspective.privateTag}`}
             </span>
@@ -108,8 +121,8 @@ export default function Perspectives({ usId, memoryId, me, closed }: Props) {
         </div>
       )}
       {(editing || (!mine && !closed)) && (
-        <div className="paper stack-sm">
-          <h2 className="subtitle">{mine ? t.perspective.edit : t.perspective.writeMine}</h2>
+        <div className="version">
+          <h2 className="version-question">{mine ? t.perspective.edit : t.perspective.writeMine}</h2>
           {form}
           {mine && (
             <button className="link danger" onClick={removeMine}>
@@ -119,13 +132,16 @@ export default function Perspectives({ usId, memoryId, me, closed }: Props) {
         </div>
       )}
 
-      <h2 className="subtitle">{t.perspective.others}</h2>
+      <h2 className="small quiet">{t.perspective.others}</h2>
       {others.length === 0 ? (
         <p className="quiet small">{t.perspective.noneYet}</p>
       ) : (
         others.map((p) => (
-          <div key={p.id} className="perspective stack-sm">
-            <span className="quiet small">{p.profiles ? displayName(p.profiles.display_name) : t.perspective.someone}</span>
+          <div key={p.id} className="version">
+            <span className="version-who">
+              <span className="dot" style={{ background: colorOf(p.author_id) }} />
+              {p.profiles ? displayName(p.profiles.display_name) : t.perspective.someone}
+            </span>
             {p.body && <p className="pre">{p.body}</p>}
             {p.audio_path && <AudioClip path={p.audio_path} durationMs={p.audio_duration_ms} />}
           </div>
