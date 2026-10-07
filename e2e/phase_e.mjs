@@ -60,7 +60,7 @@ await a.screenshot({ path: `${shots}/e1-timeline.png`, fullPage: true });
 // Export (alice)
 await a.goto(`${BASE}/me/export`);
 const [download] = await Promise.all([a.waitForEvent('download'), a.click('text=开始导出')]);
-const zipPath = `${process.cwd()}/export.zip`;
+const zipPath = `${shots}/export.zip`;
 await download.saveAs(zipPath);
 const listing = execSync(`unzip -l ${zipPath}`).toString();
 if (!listing.includes('data.json') || !listing.includes('README.txt') || !/media\/.+\.jpg/.test(listing)) {
