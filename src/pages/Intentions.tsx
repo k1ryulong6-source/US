@@ -67,7 +67,10 @@ export default function Intentions() {
           <PencilPlus />
         </Link>
       </div>
-      <h1 className="sr-only">{t.intention.title}</h1>
+      <header className="tab-head">
+        <h1 className="tab-title">{t.intention.title}</h1>
+        <p className="tab-sub">{t.intention.sub}</p>
+      </header>
       {saved && <p className="quiet small">{t.intention.saved}</p>}
 
       <section className="intent-section">
@@ -78,12 +81,18 @@ export default function Intentions() {
           open.map((i) => (
             <div key={i.id} className="intent-row">
               <span className="intent-mark">
-                <PencilLoop width={28} height={20} seed={i.id} />
+                <PencilLoop width={36} height={26} seed={i.id} />
               </span>
               <IntentionItem intention={i} me={me} showUs onChange={load} />
             </div>
           ))
         )}
+        <Link to="/answer" className="intent-row intent-add">
+          <span className="intent-mark">
+            <PencilPlus />
+          </span>
+          <span>{t.intention.addOne}</span>
+        </Link>
       </section>
 
       {done.length > 0 && (

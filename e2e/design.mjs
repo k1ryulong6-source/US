@@ -49,7 +49,7 @@ await a.getByRole('dialog', { name: '头像' }).waitFor();
 const cam = await a.locator('.sheet input[type=file]').first().getAttribute('capture');
 if (cam !== 'user') throw new Error('avatar camera should face the user, got ' + cam);
 await a.locator('.sheet input[type=file]').nth(1).setInputFiles(`${here}/photo_wall.jpg`);
-await a.locator('.avatar-wash').waitFor();
+await a.locator('.me-photo-hint').waitFor({ state: 'detached' });
 if (!sql(`select avatar_path from profiles where display_name = '小林'`).startsWith('avatars/')) throw new Error('avatar not saved');
 await shot(a, 'm1-me');
 await a.getByRole('button', { name: '头像' }).click();

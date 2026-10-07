@@ -10,12 +10,11 @@ import { setAvatar } from '../lib/media';
 import { useSignedUrls } from '../lib/useSignedUrls';
 import { colorOf } from '../lib/palette';
 import Palette from '../components/Palette';
-import { CLEAR_WATER } from '../lib/washes';
 import Wash from '../components/Wash';
 import PhotoSheet from '../components/PhotoSheet';
 import Sheet from '../components/Sheet';
 import { startMove } from '../lib/transfer';
-import { PencilCamera } from '../components/Pencil';
+import { PencilCamera, PencilMore, PencilRule } from '../components/Pencil';
 
 export default function Me() {
   const { session, profile, isGuest, refreshProfile } = useAuth();
@@ -27,6 +26,8 @@ export default function Me() {
   const [error, setError] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
   const [moveSheet, setMoveSheet] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const [bindSheet, setBindSheet] = useState(false);
   const [moving, setMoving] = useState(false);
   const [moveFailed, setMoveFailed] = useState(false);
   const avatar = useSignedUrls(profile?.avatar_path ? [profile.avatar_path] : []);
@@ -39,8 +40,8 @@ export default function Me() {
   const mine = colorOf(session.user.id, profile.color);
   const avatarUrl = profile.avatar_path ? avatar[profile.avatar_path] : null;
 
-  async function saveName(e: FormEvent) {
-    e.preventDefault();
+  async function saveName(e?: FormEvent) {
+    e?.preventDefault();
     const { error } = await supabase
       .from('profiles')
       .update({ display_name: name.trim() })
@@ -94,109 +95,129 @@ export default function Me() {
     await supabase.auth.signOut();
   }
 
+  const bindForm =
+    bindStep === 'email' ? (
+      <form onSubmit={sendBindCode} className="sheet-body">
+        <p className="small">{t.me.guestHint}</p>
+        <input
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          required
+          value={email}
+          placeholder={t.login.emailPlaceholder}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <button className="primary self-start">{t.me.bindEmail}</button>
+      </form>
+    ) : bindStep === 'code' ? (
+      <form onSubmit={verifyBindCode} className="sheet-body">
+        <p className="quiet small">{t.me.bindSent(email)}</p>
+        <input
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          required
+          value={code}
+          placeholder={t.login.codeLabel}
+          onChange={(e) => setCode(e.target.value)}
+        />
+        <button className="primary self-start">{t.login.verify}</button>
+      </form>
+    ) : (
+      <p className="sheet-body">{t.me.bindDone}</p>
+    );
+
   return (
     <div className="me-page">
-      <h1 className="sr-only">{t.me.title}</h1>
-      {/* your colour: it is how you appear in every US */}
-      <Wash
-        className="me-wash"
-        drops={[
-          { x: -0.12, y: -0.1, r: 0.66, color: mine, alpha: 0.9 },
-          { x: 0.32, y: 0.3, r: 0.4, color: mine, alpha: 0.85 },
-        ]}
-        seed={1.9}
-      />
-      <p className="me-name">{profile.display_name}</p>
-      <Palette value={mine} onChange={(hex) => void chooseColor(hex)} />
-      <p className="center small quiet">{t.me.color}</p>
-
-      <div className="me-list">
-        <button type="button" className="me-row" onClick={() => setSheet(true)}>
-          <span>{t.photo.avatar}</span>
-          <span className="avatar">
-            {avatarUrl ? (
-              <Wash className="avatar-wash" drops={CLEAR_WATER} photo={avatarUrl} photoK={[0.95, 0.1]} seed={9.9} flow={0.04} />
-            ) : (
-              <PencilCamera size={22} />
-            )}
-          </span>
+      <div className="topbar end">
+        <button type="button" className="icon-link" onClick={() => setMenu(true)} aria-label={t.about.more}>
+          <PencilMore />
         </button>
+      </div>
+      <h1 className="sr-only">{t.me.title}</h1>
 
-      <form onSubmit={saveName} className="stack-sm">
-        <label className="field">
-          <span>{t.me.nameLabel}</span>
-          <input
-            required
-            maxLength={40}
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setNameSaved(false);
-            }}
-          />
-        </label>
-        {name.trim() && name !== profile.display_name && <button className="secondary">{t.common.save}</button>}
+      {/* you: your colour, and your photo soaked into it when you have one */}
+      <button type="button" className="me-portrait" onClick={() => setSheet(true)} aria-label={t.photo.avatar}>
+        <Wash
+          className="me-wash"
+          drops={[
+            { x: -0.12, y: -0.1, r: 0.66, color: mine, alpha: avatarUrl ? 0.7 : 0.9 },
+            { x: 0.32, y: 0.3, r: 0.4, color: mine, alpha: 0.85 },
+          ]}
+          photo={avatarUrl}
+          seed={1.9}
+        />
+        {!avatarUrl && (
+          <span className="me-photo-hint">
+            <PencilCamera size={18} />
+            {t.me.addPhoto}
+          </span>
+        )}
+      </button>
+
+      <form onSubmit={saveName} className="me-name-form">
+        <input
+          className="me-name"
+          required
+          maxLength={40}
+          aria-label={t.me.nameLabel}
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setNameSaved(false);
+          }}
+          onBlur={() => name.trim() && name !== profile.display_name && void saveName()}
+        />
         {nameSaved && <span className="quiet small">{t.common.saved}</span>}
       </form>
 
-      {isGuest && bindStep !== 'done' ? (
-        <section className="paper stack-sm">
-          <h2 className="subtitle">{t.me.guestTitle}</h2>
-          <p className="quiet small">{t.me.guestHint}</p>
-          {bindStep === 'email' ? (
-            <form onSubmit={sendBindCode} className="stack-sm">
-              <input
-                type="email"
-                inputMode="email"
-                autoComplete="email"
-                required
-                value={email}
-                placeholder={t.login.emailPlaceholder}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <button className="primary">{t.me.bindEmail}</button>
-            </form>
-          ) : (
-            <form onSubmit={verifyBindCode} className="stack-sm">
-              <p className="quiet small">{t.me.bindSent(email)}</p>
-              <input
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                required
-                value={code}
-                placeholder={t.login.codeLabel}
-                onChange={(e) => setCode(e.target.value)}
-              />
-              <button className="primary">{t.login.verify}</button>
-            </form>
-          )}
-        </section>
-      ) : (
-        <p className="quiet small">
-          {bindStep === 'done' ? t.me.bindDone : t.me.emailLine(session.user.email ?? '')}
-        </p>
+      <Palette value={mine} onChange={(hex) => void chooseColor(hex)} />
+      <p className="me-caption">{t.me.colorHint}</p>
+
+      {isGuest && bindStep !== 'done' && (
+        <button type="button" className="me-guest" onClick={() => setBindSheet(true)}>
+          {t.me.guestLine}
+        </button>
       )}
 
       <ErrorNote show={Boolean(error)} text={error ?? undefined} />
 
-      <ReminderSettings />
+      <PencilRule />
+      <nav className="me-links">
+        <Link to="/me/kept" className="me-link">
+          <span>{t.me.seenCollection}</span>
+          <span aria-hidden="true">→</span>
+        </Link>
+      </nav>
 
-      {isIos() && !isStandalone() && <p className="quiet small">{t.install.hint}</p>}
+      {menu && (
+        <Sheet title={t.about.more} onClose={() => setMenu(false)}>
+          {isGuest && bindStep !== 'done' ? (
+            <button type="button" className="sheet-row" onClick={() => (setMenu(false), setBindSheet(true))}>
+              {t.me.bindEmail}
+            </button>
+          ) : (
+            <p className="sheet-row quiet">{bindStep === 'done' ? t.me.bindDone : t.me.emailLine(session.user.email ?? '')}</p>
+          )}
+          <button type="button" className="sheet-row" onClick={() => (setMenu(false), setMoveSheet(true))}>
+            {t.move.title}
+          </button>
+          <Link to="/me/export" className="sheet-row">
+            {t.me.export}
+          </Link>
+          <ReminderSettings />
+          {isIos() && !isStandalone() && <p className="sheet-row quiet small">{t.install.hint}</p>}
+          <button type="button" className="sheet-row quiet" onClick={signOut}>
+            {t.me.signOut}
+          </button>
+        </Sheet>
+      )}
 
-      <Link to="/me/kept" className="link">
-        {t.me.seenCollection}
-      </Link>
-      <Link to="/me/export" className="link">
-        {t.me.export}
-      </Link>
-      <button type="button" className="link" onClick={() => setMoveSheet(true)}>
-        {t.move.title}
-      </button>
-
-      <button className="link quiet" onClick={signOut}>
-        {t.me.signOut}
-      </button>
-      </div>
+      {bindSheet && (
+        <Sheet title={t.me.bindEmail} onClose={() => setBindSheet(false)}>
+          {bindForm}
+        </Sheet>
+      )}
 
       {moveSheet && (
         <Sheet title={t.move.title} onClose={() => setMoveSheet(false)}>

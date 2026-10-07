@@ -14,9 +14,12 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
     "fflate": "^0.8.3",
+    "lxgw-wenkai-screen-webfont": "^1.7.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.4",
+    "workbox-expiration": "^7.4.1",
+    "workbox-strategies": "^7.4.1"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",

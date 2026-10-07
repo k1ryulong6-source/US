@@ -6,7 +6,6 @@ import { useUs } from '../lib/useUs';
 import { displayName, formatDate, presetName, todayIso } from '../lib/format';
 import { useSignedUrls } from '../lib/useSignedUrls';
 import { usColors } from '../lib/palette';
-import { CLEAR_WATER } from '../lib/washes';
 import type { Drop } from '../lib/watercolour';
 import type { Invitation, Member, Proposal, ProposalKind, UsPreset, UsState } from '../lib/types';
 import { t } from '../strings';
@@ -101,9 +100,8 @@ function Portrait({
               <Wash
                 className="portrait-photo"
                 style={{ width: size, height: size, left: `calc(50% + ${dx * ring - size / 2}px)`, top: half + dy * ring - size / 2 }}
-                drops={CLEAR_WATER}
+                drops={[{ x: 0, y: 0, r: 0.62, color: colorAt(i), alpha: 0.75 }]}
                 photo={url}
-                photoK={[0.95, 0.1]}
                 seed={i * 2.3 + 1}
                 flow={0.04}
               />

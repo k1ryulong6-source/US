@@ -23,6 +23,7 @@ const who = sql(`select id from profiles where display_name = '搬家的人'`);
 
 // …and moves to another (say, the home-screen app)
 await a.goto(`${BASE}/me`);
+await a.getByRole('button', { name: '更多' }).click();
 await a.getByRole('button', { name: '换到另一台设备' }).click();
 await a.getByRole('button', { name: '生成换设备码' }).click();
 await a.waitForURL(/login/);
@@ -50,6 +51,7 @@ step('the old device let go');
 
 // changing your mind gives the session back
 await b.goto(`${BASE}/me`);
+await b.getByRole('button', { name: '更多' }).click();
 await b.getByRole('button', { name: '换到另一台设备' }).click();
 await b.getByRole('button', { name: '生成换设备码' }).click();
 await b.waitForURL(/login/);

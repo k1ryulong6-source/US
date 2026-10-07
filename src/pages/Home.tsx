@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { usColors } from '../lib/palette';
 import { usWash } from '../lib/washes';
+import { displayName } from '../lib/format';
 import type { MyUsListItem } from '../lib/types';
 import { t } from '../strings';
 import ErrorNote from '../components/ErrorNote';
@@ -16,7 +17,13 @@ interface MemberColor {
   us_id: string;
   user_id: string;
   joined_at: string;
-  profiles: { color: string | null } | null;
+  profiles: { color: string | null; display_name: string | null } | null;
+}
+
+const WEEKDAYS = '日一二三四五六';
+function todayLine() {
+  const d = new Date();
+  return `${d.getMonth() + 1}月${d.getDate()}日 · 星期${WEEKDAYS[d.getDay()]}`;
 }
 
 /**
@@ -28,6 +35,7 @@ export default function Home() {
   const me = session?.user.id ?? '';
   const [items, setItems] = useState<MyUsListItem[] | null>(null);
   const [colors, setColors] = useState<Map<string, string[]>>(new Map());
+  const [people, setPeople] = useState<Map<string, string>>(new Map());
   const [reordering, setReordering] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -50,18 +58,22 @@ export default function Home() {
     setNews(new Set((news as string[] | null) ?? []));
     const { data: ms } = await supabase
       .from('us_members')
-      .select('us_id, user_id, joined_at, profiles!us_members_user_id_fkey(color)')
+      .select('us_id, user_id, joined_at, profiles!us_members_user_id_fkey(color, display_name)')
       .in('us_id', list.map((u) => u.id))
       .is('left_at', null)
       .order('joined_at', { ascending: true });
     const byUs = new Map<string, MemberColor[]>();
     for (const m of (ms as unknown as MemberColor[]) ?? []) byUs.set(m.us_id, [...(byUs.get(m.us_id) ?? []), m]);
     const next = new Map<string, string[]>();
+    const who = new Map<string, string>();
     for (const [usId, members] of byUs) {
+      const others = members.filter((m) => m.user_id !== me).map((m) => displayName(m.profiles?.display_name));
+      who.set(usId, [t.common.you, ...others].join('、'));
       const resolved = usColors(members.map((m) => ({ user_id: m.user_id, color: m.profiles?.color })), me);
       next.set(usId, [resolved.get(me), ...members.filter((m) => m.user_id !== me).map((m) => resolved.get(m.user_id))].filter(Boolean) as string[]);
     }
     setColors(next);
+    setPeople(who);
     // the next launch opens with the colours of your first US
     const first = list.find((u) => !u.hidden);
     if (first && next.get(first.id)?.length) rememberSplashColors(next.get(first.id)!);
@@ -94,7 +106,11 @@ export default function Home() {
 
   return (
     <div className="home">
-      {items.length === 0 && <p className="quiet pre center pad">{t.home.empty}</p>}
+      <header className="tab-head">
+        <p className="tab-date">{todayLine()}</p>
+        <WeeklyQuestion />
+      </header>
+      {items.length === 0 && <p className="home-empty pre">{t.home.empty}</p>}
 
       <ul className="us-washes">
         {visible.map((us, index) => {
@@ -111,7 +127,8 @@ export default function Home() {
                   scale={index === 0 ? 0.78 : 0.9}
                 />
                 <span className={quiet ? 'us-wash-name quiet' : 'us-wash-name'}>
-                  {us.name}
+                  <span>{us.name}</span>
+                  {people.get(us.id) && <span className="us-wash-people">{people.get(us.id)}</span>}
                   {quiet && <span className="sr-only"> · {t.states[us.state]}</span>}
                   {news.has(us.id) && <span className="sr-only"> · {t.home.fresh}</span>}
                 </span>
@@ -130,15 +147,13 @@ export default function Home() {
           );
         })}
         <li className={items.length ? 'us-item new' : 'us-item new first'}>
-          <Link to="/new" className="pencil-link" aria-label={items.length ? t.home.create : undefined}>
+          <Link to="/new" className="pencil-link">
             <PencilLoop width={60} height={60} seed="new-us" />
-            {/* the first time, say what the empty pencil circle is for */}
-            {items.length === 0 && <span className="small quiet">{t.home.create}</span>}
+            <span className="us-new-label">{t.home.create}</span>
           </Link>
         </li>
       </ul>
 
-      <WeeklyQuestion />
 
       {(visible.length > 1 || hidden.length > 0) && (
         <div className="home-tools">

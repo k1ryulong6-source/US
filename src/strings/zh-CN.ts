@@ -304,6 +304,8 @@ const zhCN = {
   intention: {
     tab: '想做的事',
     title: '想做的事',
+    sub: '有些想为谁做，有些想一起做。还没做的写在铅笔里。',
+    addOne: '再写一件',
     newTitle: '想做的一件事',
     noPrompt: '有没有一件想为谁做的事？',
     pickUs: '为了哪段关系',
@@ -398,6 +400,8 @@ const zhCN = {
     seenCollection: '收好的「我看见的你」',
     color: '你的颜色',
     colorHint: '你在所有 US 里都是这个颜色。',
+    addPhoto: '放一张你的照片',
+    guestLine: '你现在是访客，身份只在这台设备上 · 绑定邮箱',
     export: '导出我的数据',
     signOutGuestWarn: '你还没绑定邮箱，退出后这个访客身份就找不回来了。确定退出吗？',
   },

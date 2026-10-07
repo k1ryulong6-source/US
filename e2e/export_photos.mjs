@@ -9,7 +9,7 @@ const us = await createUs(a, '照片测试');
 await a.goto(`${BASE}/me`);
 await a.getByRole('button', { name: '头像' }).click();
 await a.locator('.sheet input[type=file]').nth(1).setInputFiles(`${FIXTURES}/photo_wall.jpg`);
-await a.locator('.avatar .wash-photo-plain').waitFor();
+await a.locator('.me-portrait .wash-photo-plain').waitFor();
 await a.goto(`${BASE}/us/${us}`);
 await a.getByRole('button', { name: '这段关系的照片' }).click();
 await a.locator('.sheet input[type=file]').nth(1).setInputFiles(`${FIXTURES}/photo_sea.jpg`);

@@ -6,7 +6,7 @@ import { useUs } from '../lib/useUs';
 import { useSignedUrls } from '../lib/useSignedUrls';
 import { setCover } from '../lib/media';
 import { usColors } from '../lib/palette';
-import { CLEAR_WATER, pool } from '../lib/washes';
+import { pool } from '../lib/washes';
 import { displayName } from '../lib/format';
 import { t } from '../strings';
 import Timeline from '../components/Timeline';
@@ -144,10 +144,10 @@ export default function UsPage() {
       <header className="us-head">
         <button type="button" className="cover" onClick={() => !closed && setSheet(true)} aria-label={t.photo.cover} disabled={closed}>
           {coverUrl ? (
-            <Wash className="cover-wash" drops={CLEAR_WATER} photo={coverUrl} photoK={[0.95, 0.1]} seed={9.1} flow={0.04} />
+            <Wash className="cover-wash" drops={pool(together)} photo={coverUrl} seed={9.1} flow={0.04} />
           ) : (
             <span className="cover-empty">
-              <PencilLoop width={64} height={64} seed={`cover-${space.id}`} />
+              <PencilLoop width={78} height={78} seed={`cover-${space.id}`} />
               <PencilCamera size={20} />
             </span>
           )}
