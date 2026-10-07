@@ -4,6 +4,24 @@ V1 的全部功能都已完成：登录、US、邀请、提议、回忆（照片
 
 ---
 
+## 先试用：不买域名（只有你自己和一位朋友）
+
+适合先在自己手机上试。`*.pages.dev` 和 `*.supabase.co` 在大陆经常打不开，所以这种方式只在国外、或者开着代理时可用；确定要给大陆的朋友用，再按后面的完整步骤买域名。
+
+1. **Supabase**：新建项目（Region 选 Tokyo）。
+   - SQL Editor → New query → 粘贴全部 7 个迁移文件的内容（按文件名顺序，或用一次性合并好的文件）→ Run。只在新项目里运行一次。
+   - Authentication → Sign In / Providers：Email 开启、关闭 "Confirm email"、OTP 长度 6；打开 **Allow anonymous sign-ins**。
+   - Authentication → Emails → Templates：Magic Link、Confirm signup 换成 `supabase/templates/` 里对应的模板（邮件里才会有 6 位验证码）。
+   - 不需要 SMTP：自带的发信服务能发给**你自己**（项目成员）的邮箱；朋友用邀请链接以访客身份进来，不需要邮箱。
+2. **Cloudflare Pages**：Workers & Pages → Create → Pages → Connect to Git，选这个仓库。
+   - Production branch 选代码所在的分支；Build command `npm run build`；Build output `dist`。
+   - 环境变量：`VITE_SUPABASE_URL` = Project URL，`VITE_SUPABASE_ANON_KEY` = publishable（anon）key，`NODE_VERSION` = `22`。
+   - 部署完会得到 `https://<名字>.pages.dev`。
+3. 回到 Supabase → Authentication → URL Configuration，Site URL 填这个 `pages.dev` 地址。
+4. 手机打开这个地址：用自己的邮箱登录 → 新建 US → 在 About 里生成邀请链接发给朋友。
+
+---
+
 ## 0. 你需要准备
 
 - 一个域名（例如 `example.com`），托管在 Cloudflare（免费套餐即可）。大陆成员访问 `*.pages.dev` 和 `*.supabase.co` 都不稳定，所以前端和 API 都需要走你自己的域名。
@@ -13,7 +31,7 @@ V1 的全部功能都已完成：登录、US、邀请、提议、回忆（照片
 ## 1. 创建 Supabase 项目
 
 1. 新建项目，Region 选 **Northeast Asia (Tokyo)**。
-2. 建表：把 `supabase/migrations/` 里的 5 个 SQL 文件**按文件名顺序**粘贴到 **SQL Editor** 执行。这一步会自动建好私有的 `media` 存储桶和题库。
+2. 建表：把 `supabase/migrations/` 里的 7 个 SQL 文件**按文件名顺序**粘贴到 **SQL Editor** 执行。这一步会自动建好私有的 `media` 存储桶和题库。
    也可以用 CLI：
    ```bash
    npx supabase login
