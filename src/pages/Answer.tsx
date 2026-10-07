@@ -4,11 +4,16 @@ import { supabase } from '../lib/supabase';
 import type { IntentionVisibility, MyUsListItem, Prompt } from '../lib/types';
 import { t } from '../strings';
 import BackLink from '../components/BackLink';
+import { useAuth } from '../lib/auth';
+import { colorOf } from '../lib/palette';
+import WetDrop from '../components/WetDrop';
+import { PencilLoop } from '../components/Pencil';
 import ErrorNote from '../components/ErrorNote';
 
 export default function Answer() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { session, profile } = useAuth();
   const promptId = params.get('prompt');
   const [prompt, setPrompt] = useState<Prompt | null>(null);
   const [spaces, setSpaces] = useState<MyUsListItem[] | null>(null);
@@ -65,14 +70,18 @@ export default function Answer() {
   if (!spaces) return <p className="quiet center pad">{t.common.loading}</p>;
 
   return (
-    <div className="stack-lg">
+    <div className="answer-page">
       <BackLink to="/" />
-      <h1 className="title question-body">{prompt?.body ?? t.intention.noPrompt}</h1>
+      {/* the week's question is a drop of your own colour, not yet fallen */}
+      <header className="answer-head">
+        <WetDrop color={colorOf(session?.user.id ?? '', profile?.color)} size={26} />
+        <h1 className="answer-question">{prompt?.body ?? t.intention.noPrompt}</h1>
+      </header>
 
       {spaces.length === 0 ? (
         <p className="note">{t.intention.noUs}</p>
       ) : (
-        <form onSubmit={submit} className="stack">
+        <form onSubmit={submit} className="stack form-column">
           {spaces.length > 1 && (
             <div className="field">
               <span>{t.intention.pickUs}</span>
@@ -95,7 +104,9 @@ export default function Answer() {
 
           {prompt?.kind !== 'seen' && (
             <>
-              <label className="field">
+              {/* what you mean to do is pencilled in until it's done */}
+              <label className="field pencilled">
+                <PencilLoop width={34} height={24} seed="answer" />
                 <span>{t.intention.bodyLabel}</span>
                 <textarea
                   rows={3}
@@ -120,7 +131,7 @@ export default function Answer() {
                 ))}
               </div>
 
-              <button className="primary self-start" disabled={busy || !usId || !body.trim()}>
+              <button className="primary center-self" disabled={busy || !usId || !body.trim()}>
                 {t.intention.save}
               </button>
             </>

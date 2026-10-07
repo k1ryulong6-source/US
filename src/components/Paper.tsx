@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { MAX_DROPS, Painter, type Bead, type Bloom, type Ribbon, type Scene, type Wash } from '../lib/watercolour';
+import { MAX_DROPS, Painter, type Bead, type Bloom, type Ribbon, type Scene, type Soak, type Wash } from '../lib/watercolour';
 
 /**
  * One sheet of paper behind the whole app. Elements on the page say what paint belongs
@@ -8,9 +8,7 @@ import { MAX_DROPS, Painter, type Bead, type Bloom, type Ribbon, type Scene, typ
  */
 
 export interface Piece {
-  washes?: (Wash & {
-    soak?: { image: HTMLCanvasElement; rect: [number, number, number, number]; k?: [number, number] } | null;
-  })[];
+  washes?: (Wash & { photo?: Soak | null })[];
   ribbon?: Ribbon | null;
   bead?: Bead | null;
 }
@@ -64,16 +62,38 @@ export function PaperProvider({ children }: { children: ReactNode }) {
     const still = matchMedia('(prefers-reduced-motion: reduce)');
     const t0 = performance.now();
     let raf = 0;
+    // Resolution adapts only when a phone can't keep up: a fast one always paints at full sharpness,
+    // a slow one steps down a little rather than stutter, and steps back up when it can.
+    let quality = 1;
+    let last = 0;
+    let slow = 0;
+    let fast = 0;
 
-    const frame = () => {
+    const frame = (ts: number) => {
       raf = requestAnimationFrame(frame);
-      if (document.hidden) return;
+      if (document.hidden) {
+        last = 0;
+        return;
+      }
+      if (last) {
+        const dt = ts - last;
+        if (dt > 30) slow++;
+        else if (dt < 18) fast++;
+        if (slow > 20) {
+          quality = Math.max(0.5, quality - 0.15);
+          slow = fast = 0;
+        } else if (fast > 240) {
+          quality = Math.min(1, quality + 0.1);
+          slow = fast = 0;
+        }
+      }
+      last = ts;
       // with reduced motion the paint is shown fully spread and stays still
       const time = still.matches ? 40 : (performance.now() - t0) / 1000;
       clock.current = time;
       const vh = window.innerHeight;
       const vw = window.innerWidth;
-      const scene: Scene = { washes: [], ribbon: null, bead: null, soak: null };
+      const scene: Scene = { washes: [], ribbon: null, bead: null };
       let drops = 0;
       for (const entry of entries.current) {
         const node = entry.el.current;
@@ -86,7 +106,6 @@ export function PaperProvider({ children }: { children: ReactNode }) {
           if (w.y + 2 * w.s < 0 || w.y - 2 * w.s > vh) continue;
           if (drops + w.drops.length > MAX_DROPS) continue;
           drops += w.drops.length;
-          if (w.soak) scene.soak = { ...w.soak, wash: scene.washes.length };
           scene.washes.push(w);
         }
         if (piece.ribbon) scene.ribbon = piece.ribbon;
@@ -98,7 +117,7 @@ export function PaperProvider({ children }: { children: ReactNode }) {
         time,
         width: vw,
         height: vh,
-        dpr: Math.min(window.devicePixelRatio || 1, 2),
+        dpr: Math.max(0.75, Math.min(window.devicePixelRatio || 1, 2) * quality),
         scrollY: sy,
         blooms: blooms.current.map((b) => ({ ...b, y: b.y - sy })),
         paper: PAPER,
@@ -139,4 +158,16 @@ export function useBloom() {
 
 export function useCanPaint() {
   return useContext(CanPaint);
+}
+
+/** true when the person asked for reduced motion: paint is shown fully spread and stays still */
+export function useStill() {
+  const [still, setStill] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
+  useEffect(() => {
+    const q = matchMedia('(prefers-reduced-motion: reduce)');
+    const on = () => setStill(q.matches);
+    q.addEventListener('change', on);
+    return () => q.removeEventListener('change', on);
+  }, []);
+  return still;
 }

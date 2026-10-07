@@ -8,11 +8,12 @@ import ReminderSettings from '../components/ReminderSettings';
 import { disableReminder, isIos, isStandalone } from '../lib/push';
 import { setAvatar } from '../lib/media';
 import { useSignedUrls } from '../lib/useSignedUrls';
-import { PALETTE, colorOf } from '../lib/palette';
+import { colorOf } from '../lib/palette';
+import Palette from '../components/Palette';
 import { CLEAR_WATER } from '../lib/washes';
 import Wash from '../components/Wash';
 import PhotoSheet from '../components/PhotoSheet';
-import { PencilCamera, PencilLoop } from '../components/Pencil';
+import { PencilCamera } from '../components/Pencil';
 
 export default function Me() {
   const { session, profile, isGuest, refreshProfile } = useAuth();
@@ -101,22 +102,7 @@ export default function Me() {
         seed={1.9}
       />
       <p className="me-name">{profile.display_name}</p>
-      <div className="palette" role="radiogroup" aria-label={t.me.color}>
-        {PALETTE.map((p, i) => (
-          <button
-            key={p.hex}
-            type="button"
-            role="radio"
-            aria-checked={p.hex === mine}
-            aria-label={p.name}
-            className="swatch"
-            onClick={() => void chooseColor(p.hex)}
-          >
-            <Wash className="swatch-paint" drops={[{ x: 0, y: 0, r: 0.82, color: p.hex, alpha: 0.9 }]} seed={4 + i} flow={0.05} />
-            {p.hex === mine && <PencilLoop width={36} height={36} seed="chosen" />}
-          </button>
-        ))}
-      </div>
+      <Palette value={mine} onChange={(hex) => void chooseColor(hex)} />
       <p className="center small quiet">{t.me.color}</p>
 
       <div className="me-list">

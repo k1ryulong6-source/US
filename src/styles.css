@@ -37,10 +37,13 @@
   box-sizing: border-box;
 }
 
+/* only the outermost background is solid: the painted paper sits just above it, under everything else */
+html {
+  background: var(--paper);
+}
 html,
 body {
   margin: 0;
-  background: var(--paper);
   color: var(--ink);
   font-family: var(--serif);
   font-size: 16px;
@@ -64,7 +67,7 @@ p {
   inset: 0;
   width: 100%;
   height: 100%;
-  z-index: 0;
+  z-index: -1;
   pointer-events: none;
 }
 
@@ -1163,4 +1166,206 @@ details > summary::-webkit-details-marker {
   font-size: 13px;
   letter-spacing: 0.3em;
   color: var(--ink-soft);
+}
+
+/* ------------------------------------------------------------ the quieter pages */
+
+.form-column {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+.section-label {
+  font-weight: 400;
+}
+
+.login-page,
+.onboarding,
+.invite-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: calc(28px + env(safe-area-inset-top));
+}
+.login-page .page-title,
+.onboarding .page-title,
+.invite-page .page-title {
+  text-align: center;
+  margin-top: 4px;
+}
+.login-mark {
+  width: min(52vw, 200px);
+  aspect-ratio: 1;
+  margin: 0 auto 6px;
+}
+.onboarding .wet-sheet {
+  width: min(56vw, 210px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+.invite-paint {
+  position: relative;
+  width: min(80vw, 300px);
+  height: min(62vw, 230px);
+  margin: 0 auto 4px;
+}
+.invite-us {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 74%;
+  height: 100%;
+}
+.invite-place {
+  position: absolute;
+  right: 2%;
+  bottom: 6%;
+}
+
+/* a new place, pencilled; paint grows inside it */
+.new-place {
+  position: relative;
+  width: 210px;
+  height: 190px;
+  margin: 4px auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.done-page .new-place {
+  width: 170px;
+  height: 150px;
+}
+.new-place > svg {
+  position: absolute;
+  inset: 0;
+}
+.new-place-paint {
+  width: 72%;
+  height: 72%;
+}
+.new-place-name {
+  text-align: center;
+  font-size: 15px;
+  letter-spacing: 0.3em;
+  margin: 6px 0 22px;
+  min-height: 1.75em;
+}
+.create-page .form-column {
+  gap: 20px;
+}
+.done-body {
+  margin-top: 10px;
+  font-size: 16px;
+}
+.done-choices {
+  align-items: center;
+}
+.done-choices .link {
+  align-self: center;
+}
+
+.answer-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin: 18px 0 28px;
+}
+.answer-head .wet-drop {
+  margin-top: 6px;
+}
+.answer-question {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1.7;
+}
+.pencilled {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  column-gap: 10px;
+  align-items: start;
+}
+.pencilled > svg {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  margin-top: 30px;
+}
+.pencilled > span,
+.pencilled > textarea {
+  grid-column: 2;
+}
+
+.leave-paint {
+  position: relative;
+  width: 240px;
+  height: 160px;
+  margin: 6px auto 0;
+}
+.leave-us {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 150px;
+  height: 150px;
+}
+.leave-me {
+  position: absolute;
+  right: 6px;
+  top: 0;
+  width: 60px;
+  height: 60px;
+}
+.leave-page,
+.export-page,
+.memory-edit,
+.about-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.leave-page .page-head,
+.export-page .page-head,
+.memory-edit .page-head {
+  margin-bottom: 6px;
+}
+
+.about-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 0;
+}
+.members {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 14px 6px;
+}
+.members li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.member-paint {
+  width: 64px;
+  height: 64px;
+}
+.member-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.about-page code {
+  font-size: 12px;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { useCanPaint, usePaint } from './Paper';
-import type { Drop } from '../lib/watercolour';
+import { useCanPaint, usePaint, useStill } from './Paper';
+import { PHOTO_SIDE, type Drop } from '../lib/watercolour';
 
 interface Props {
   drops: Drop[];
@@ -36,6 +36,9 @@ export default function Wash({
 }: Props) {
   const ref = useRef<HTMLSpanElement>(null);
   const canPaint = useCanPaint();
+  const still = useStill();
+  // a growing drop spreads from the moment this element appears, not from when the app opened
+  const born = useRef(performance.now());
   const soaked = useSquarePhoto(canPaint ? photo : null);
 
   usePaint(ref, (r) => {
@@ -43,10 +46,9 @@ export default function Wash({
     const s = (Math.min(r.width, r.height) / 2) * scale;
     const x = r.left + r.width / 2;
     const y = r.top + r.height / 2;
-    const soak = soaked.canvas
-      ? { image: soaked.canvas, rect: [x - s * 1.02, y - s * 1.02, s * 2.04, s * 2.04] as [number, number, number, number], k: photoK }
-      : null;
-    return { washes: [{ x, y, s, flow, seed, strength, grow, drops, soak }] };
+    const photo = soaked.canvas ? { image: soaked.canvas, k: photoK } : null;
+    const growth = grow && !still ? 1 - Math.exp((-(performance.now() - born.current) / 1000) * grow) : undefined;
+    return { washes: [{ x, y, s, flow, seed, strength, growth, drops, photo }] };
   });
 
   const plain = photo && (!canPaint || soaked.failed);
@@ -69,7 +71,7 @@ function useSquarePhoto(url: string | null | undefined) {
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       if (!alive) return;
-      const side = 512;
+      const side = PHOTO_SIDE;
       const c = document.createElement('canvas');
       c.width = c.height = side;
       const ctx = c.getContext('2d');

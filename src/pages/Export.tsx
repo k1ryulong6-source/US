@@ -40,18 +40,20 @@ export default function Export() {
   }
 
   return (
-    <div className="stack-lg">
+    <div className="export-page">
       <BackLink to="/me" />
-      <h1 className="title">{t.export.title}</h1>
+      <header className="page-head">
+        <h1 className="page-title">{t.export.title}</h1>
+      </header>
       <p className="quiet">{t.export.intro}</p>
       {state === 'working' ? (
         <p className="quiet">{progress ? t.export.working(progress[0], progress[1]) : t.export.collecting}</p>
       ) : (
-        <button className="primary self-start" onClick={run}>
+        <button className="primary center-self" onClick={run}>
           {state === 'ready' ? t.export.again : t.export.start}
         </button>
       )}
-      {state === 'ready' && <p className="note">{t.export.ready}</p>}
+      {state === 'ready' && <p className="note center">{t.export.ready}</p>}
       <ErrorNote show={failed} />
     </div>
   );

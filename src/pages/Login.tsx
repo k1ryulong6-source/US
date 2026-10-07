@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { t } from '../strings';
 import ErrorNote from '../components/ErrorNote';
+import Wash from '../components/Wash';
 
 function safeNext(raw: string | null): string {
   // Only allow in-app paths.
@@ -65,12 +66,21 @@ export default function Login() {
   }
 
   return (
-    <div className="page narrow pad-top stack">
-      <h1 className="title">{t.login.title}</h1>
-      <p className="quiet">{t.login.intro}</p>
+    <div className="page narrow login-page">
+      {/* two colours meeting: what US is */}
+      <Wash
+        className="login-mark"
+        drops={[
+          { x: -0.25, y: -0.22, r: 0.66, color: '#E2B21F', alpha: 0.85 },
+          { x: 0.26, y: 0.27, r: 0.64, color: '#2779BE', alpha: 0.8 },
+        ]}
+        seed={2.2}
+      />
+      <h1 className="page-title">{t.login.title}</h1>
+      <p className="quiet center small">{t.login.intro}</p>
 
       {step === 'email' ? (
-        <form onSubmit={sendCode} className="stack">
+        <form onSubmit={sendCode} className="stack form-column">
           <label className="field">
             <span>{t.login.emailLabel}</span>
             <input
@@ -96,7 +106,7 @@ export default function Login() {
           )}
         </form>
       ) : (
-        <form onSubmit={verify} className="stack">
+        <form onSubmit={verify} className="stack form-column">
           <p className="quiet">{t.login.codeSent(email)}</p>
           <label className="field">
             <span>{t.login.codeLabel}</span>

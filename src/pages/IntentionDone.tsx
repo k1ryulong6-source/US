@@ -7,6 +7,11 @@ import { t } from '../strings';
 import BackLink from '../components/BackLink';
 import ErrorNote from '../components/ErrorNote';
 import MemoryForm from '../components/MemoryForm';
+import { useUs } from '../lib/useUs';
+import { usColors } from '../lib/palette';
+import { pool } from '../lib/washes';
+import Wash from '../components/Wash';
+import { PencilLoop } from '../components/Pencil';
 
 export default function IntentionDone() {
   const { iid = '' } = useParams();
@@ -16,6 +21,7 @@ export default function IntentionDone() {
   const [mode, setMode] = useState<'choose' | 'memory' | 'note'>('choose');
   const [note, setNote] = useState('');
   const [failed, setFailed] = useState(false);
+  const { members } = useUs(intention?.us_id);
 
   useEffect(() => {
     supabase
@@ -30,6 +36,11 @@ export default function IntentionDone() {
   if (!intention || intention.status !== 'open') return <Navigate to="/intentions" replace />;
 
   const canNote = intention.visibility === 'private' && intention.author_id === session?.user.id;
+  const me = session?.user.id ?? '';
+  const colors = usColors(members.map((m) => ({ user_id: m.user_id, color: m.profiles?.color })), me);
+  const together = [colors.get(me), ...members.filter((m) => m.user_id !== me).map((m) => colors.get(m.user_id))].filter(
+    Boolean,
+  ) as string[];
 
   async function complete(memoryId: string | null, text: string | null, goTo: string) {
     const { error } = await supabase.rpc('complete_intention', {
@@ -47,25 +58,30 @@ export default function IntentionDone() {
   }
 
   return (
-    <div className="stack-lg">
+    <div className="done-page">
       <BackLink to="/intentions" />
-      <header className="stack-sm">
-        <h1 className="title">{t.done.title}</h1>
-        <p className="quiet pre">{intention.body}</p>
-        <p>{t.done.intro}</p>
+      {/* what was pencilled in gets painted */}
+      <div className="new-place" aria-hidden="true">
+        <PencilLoop width={170} height={150} seed={intention.id} />
+        {together.length > 0 && <Wash className="new-place-paint" drops={pool(together)} grow={0.5} seed={2.7} />}
+      </div>
+      <header className="page-head">
+        <h1 className="page-title">{t.done.title}</h1>
+        <p className="pre done-body">{intention.body}</p>
+        <p className="quiet small">{t.done.intro}</p>
       </header>
 
       {mode === 'choose' && (
-        <div className="stack">
-          <button className="primary self-start" onClick={() => setMode('memory')}>
+        <div className="stack done-choices">
+          <button className="primary" onClick={() => setMode('memory')}>
             {t.done.asMemory}
           </button>
           {canNote && (
-            <button className="secondary self-start" onClick={() => setMode('note')}>
+            <button className="secondary" onClick={() => setMode('note')}>
               {t.done.asNote}
             </button>
           )}
-          <button className="link" onClick={() => complete(null, null, '/intentions')}>
+          <button className="link quiet center-self" onClick={() => complete(null, null, '/intentions')}>
             {t.done.nothing}
           </button>
         </div>
@@ -91,7 +107,7 @@ export default function IntentionDone() {
             placeholder={t.done.notePlaceholder}
             onChange={(e) => setNote(e.target.value)}
           />
-          <button className="primary self-start">{t.done.saveNote}</button>
+          <button className="primary center-self">{t.done.saveNote}</button>
         </form>
       )}
       <ErrorNote show={failed} />

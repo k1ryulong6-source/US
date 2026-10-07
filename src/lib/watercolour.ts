@@ -24,8 +24,8 @@ export interface Wash {
   flow: number;
   seed: number;
   strength?: number;
-  /** spread from a single drop over time (per second) */
-  grow?: number;
+  /** how far it has spread from a single drop, 0..1 (omitted = fully spread) */
+  growth?: number;
   drops: Drop[];
 }
 
@@ -46,22 +46,18 @@ export interface Bead {
   color: string;
 }
 
+/** A photo soaked into a wash: it shows where the paint is; the wet edge stays paint. */
 export interface Soak {
-  /** the photo, already cropped square (a canvas, so the crop is done once) */
+  /** the photo, already cropped square to PHOTO_SIDE (a canvas, so the crop is done once) */
   image: HTMLCanvasElement;
-  /** viewport rect [x, y, w, h] the photo is mapped onto */
-  rect: [number, number, number, number];
-  /** which wash (index into washes) it soaks into */
-  wash: number;
   /** how strongly the photo shows, and how much of the wash's own pigment stays on it */
   k?: [number, number];
 }
 
 export interface Scene {
-  washes: Wash[];
+  washes: (Wash & { photo?: Soak | null })[];
   ribbon?: Ribbon | null;
   bead?: Bead | null;
-  soak?: Soak | null;
 }
 
 export interface Bloom {
@@ -72,6 +68,9 @@ export interface Bloom {
 }
 
 export const MAX_DROPS = 32;
+/** Photos live in one atlas texture: 4 × 4 slots of 512 px, so a screen can show up to 16 at once. */
+export const PHOTO_SIDE = 512;
+const ATLAS_GRID = 4;
 const MAX_RIBBON = 16;
 
 const FS = [
@@ -81,7 +80,7 @@ const FS = [
   'uniform vec4 uD[32];uniform vec4 uDK[32];uniform vec4 uDS[32];uniform vec4 uDG[32];uniform vec4 uDG2[32];',
   'uniform vec4 uBloom[4];uniform vec3 uPaper;uniform vec3 uBead;uniform vec3 uBeadK;',
   'uniform vec4 uRib[16];uniform int uNR;uniform vec3 uRibK1;uniform vec3 uRibK2;uniform float uRibTop;',
-  'uniform sampler2D uPhoto;uniform vec4 uPhotoRect;uniform int uPhotoG;uniform vec2 uPhotoK;',
+  'uniform sampler2D uPhoto;',
   'uniform vec2 uScroll;uniform float uDark;uniform vec3 uPaperDark;',
   'vec2 hash(vec2 p){p=vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));return -1.+2.*fract(sin(p)*43758.5453123);}',
   'float noise(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);',
@@ -100,7 +99,7 @@ const FS = [
   '  float jag=1.+.42*fbm(dv/B.w*2.6+B.z);float rr=rad*jag;',
   '  if(d<rr*1.25){p-=normalize(dv+1e-4)*rr*.32*smoothstep(rr*1.25,0.,d);}',
   '  dil=max(dil,smoothstep(rr,rr*.1,d)*.45);brim+=exp(-pow((d-rr)/(1.3+rr*.035),2.))*.75*smoothstep(0.,.6,age);}',
-  ' vec3 od=vec3(0.);float pm=0.;',
+  ' vec3 od=vec3(0.);float pm=0.,ps=-1.,pkx=.5,pky=.45;vec3 pg=vec3(0.);',
   ' float dn[33];float mm[33];float gi[33];float rt[33];gi[32]=-1.;',
   ' float lastG=-1.,run=0.,T=0.,wet=0.,near=0.,gsc=1.;vec2 s=vec2(0.),w=vec2(0.),w2=vec2(0.);',
   // pass 1: each drop's density; the flow field is computed once per US and reused by its drops
@@ -108,8 +107,8 @@ const FS = [
   '  if(i>=uN)break;',
   '  vec4 D=uD[i];vec4 G=uDG[i];vec4 G2=uDG2[i];vec4 K=uDK[i];vec4 S=uDS[i];gi[i]=D.w;',
   '  if(D.w!=lastG){lastG=D.w;run=0.;',
-  '   s=(p-G.xy)/G.z;if(G2.z>.5)s.x=-s.x;near=dot(s,s)<4.?1.:0.;',
-  '   if(near>.5){T=uTime*G.w*.6+G2.x*37.;gsc=G2.w>0.?max(.03,1.-exp(-uTime*G2.w)):1.;',
+  '   s=(p-G.xy)/G.z;near=dot(s,s)<4.?1.:0.;',
+  '   if(near>.5){T=uTime*G.w*.6+G2.x*37.;gsc=G2.w>0.?max(.03,G2.w):1.;',
   '    vec2 q=vec2(fbm(s*1.2+vec2(0.,T*.5)),fbm(s*1.2+vec2(5.2,1.3)-vec2(T*.42,0.)));',
   '    vec2 r=vec2(fbm(s*1.2+2.4*q+vec2(1.7,9.2)+T*.2),fbm(s*1.2+2.4*q+vec2(8.3,2.8)-T*.17));',
   '    w=s+.62*r;',
@@ -131,12 +130,14 @@ const FS = [
   // pass 2, backwards: where two pigments of one US meet they braid instead of a flat overlap
   ' float cur=0.;',
   ' for(int k=0;k<32;k++){if(31-k>=uN)continue;',
-  '  if(gi[31-k]!=gi[32-k])cur=rt[31-k];',
+  // at the end of each wash (walking backwards) its total density is known: the photo of the
+  // densest photo-wash under this pixel is the one that shows
+  '  if(gi[31-k]!=gi[32-k]){cur=rt[31-k];vec4 S=uDS[31-k];',
+  '   if(S.z>-.5&&cur>pm){pm=cur;ps=S.z;pkx=S.w;pky=uDG2[31-k].z;pg=uDG[31-k].xyz;}}',
   '  if(dn[31-k]<=0.)continue;',
   '  float other=clamp((cur-dn[31-k])*1.4,0.,1.);',
   '  float dd=dn[31-k]*mix(1.,.3+.95*mm[31-k],other);',
-  '  od+=uDK[31-k].rgb*dd*uDG2[31-k].y;',
-  '  if(gi[31-k]==float(uPhotoG))pm=max(pm,cur);}',
+  '  od+=uDK[31-k].rgb*dd*uDG2[31-k].y;}',
   // a run of paint down the page: two pigments side by side, wet at the top, dry further down
   ' if(uNR>1){',
   '  float age=clamp((p.y-uRibTop)/900.,0.,1.);float Tr=uTime*.05*(1.-age)+3.;',
@@ -158,10 +159,11 @@ const FS = [
   ' vec3 col=uPaper*paper*exp(-od);',
   // a bead of clean water resting on the paper
   // a photo soaked into the wash: it shows where the paint is, the wet edge stays paint
-  ' if(uPhotoG>=0){vec2 uv=(p-uPhotoRect.xy)/uPhotoRect.zw;',
-  '  if(uv.x>0.&&uv.y>0.&&uv.x<1.&&uv.y<1.){vec3 ph=texture2D(uPhoto,uv).rgb;',
-  '   float m=smoothstep(.22,.75,pm);vec3 odp=-log(max(ph,vec3(.04)))*uPhotoK.x;',
-  '   col=uPaper*paper*exp(-mix(od,odp+od*uPhotoK.y,m));}}',
+  ' if(ps>-.5){vec2 uv=(p-(pg.xy-pg.z*1.02))/(pg.z*2.04);',
+  '  if(uv.x>0.&&uv.y>0.&&uv.x<1.&&uv.y<1.){',
+  '   vec2 cell=vec2(mod(ps,4.),floor(ps/4.));vec3 ph=texture2D(uPhoto,(cell+clamp(uv,.003,.997))/4.).rgb;',
+  '   float m=smoothstep(.22,.75,pm);vec3 odp=-log(max(ph,vec3(.04)))*pkx;',
+  '   col=uPaper*paper*exp(-mix(od,odp+od*pky,m));}}',
   ' if(uBead.z>0.){vec2 bd=p-uBead.xy;float br=uBead.z;vec2 n=normalize(bd+1e-4);',
   '  float jag=1.+.22*fbm3(n*1.3+vec2(3.,1.))+.02*sin(uTime*.9+atan(bd.y,bd.x)*2.);',
   '  float d=length(bd*vec2(1.,1.18))/(br*jag);',
@@ -199,8 +201,13 @@ export class Painter {
   private aG2 = new Float32Array(MAX_DROPS * 4);
   private aR = new Float32Array(MAX_RIBBON * 4);
   private aB = new Float32Array(16);
-  private tex: WebGLTexture | null = null;
-  private texImage: HTMLCanvasElement | null = null;
+  private atlas: WebGLTexture | null = null;
+  /** which photo sits in each atlas slot, and when it was last on screen */
+  private slots: { image: HTMLCanvasElement | null; used: number }[] = Array.from(
+    { length: ATLAS_GRID * ATLAS_GRID },
+    () => ({ image: null, used: -1 }),
+  );
+  private frame = 0;
   private failed = new WeakSet<HTMLCanvasElement>();
 
   static create(canvas: HTMLCanvasElement): Painter | null {
@@ -235,7 +242,7 @@ export class Painter {
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     for (const n of ['uRes', 'uDpr', 'uTime', 'uN', 'uD', 'uDK', 'uDS', 'uDG', 'uDG2', 'uBloom', 'uPaper', 'uBead',
-      'uBeadK', 'uRib', 'uNR', 'uRibK1', 'uRibK2', 'uRibTop', 'uPhoto', 'uPhotoRect', 'uPhotoG', 'uPhotoK', 'uScroll', 'uDark',
+      'uBeadK', 'uRib', 'uNR', 'uRibK1', 'uRibK2', 'uRibTop', 'uPhoto', 'uScroll', 'uDark',
       'uPaperDark']) {
       this.u[n] = gl.getUniformLocation(pr, n);
     }
@@ -271,17 +278,20 @@ export class Painter {
     gl.uniform3fv(u.uPaperDark, rgb(o.paperDark));
     gl.uniform1f(u.uDark, o.dark ? 1 : 0);
 
-    // drops, flattened; each carries its wash so the shader never nests loops
+    // drops, flattened; each carries its wash (and its wash's photo slot) so the shader never nests loops
+    this.frame++;
     let n = 0;
     o.scene.washes.forEach((g, gi) => {
+      const slot = g.photo ? this.slotFor(g.photo.image) : -1;
+      const [kx, ky] = g.photo?.k ?? [0.5, 0.45];
       for (const d of g.drops) {
         if (n >= MAX_DROPS) return;
         const a = d.alpha ?? 0.8;
         this.aD.set([d.x, d.y, d.r, gi], n * 4);
         this.aK.set([...absorb(d.color, a), n * 1.37 + gi], n * 4);
-        this.aS.set([d.aspect ?? 1, d.angle ?? 0, 0, 0], n * 4);
+        this.aS.set([d.aspect ?? 1, d.angle ?? 0, slot, kx], n * 4);
         this.aG.set([g.x, g.y, g.s, g.flow], n * 4);
-        this.aG2.set([g.seed, g.strength ?? 1, 0, g.grow ?? 0], n * 4);
+        this.aG2.set([g.seed, g.strength ?? 1, ky, g.growth ?? 0], n * 4);
         n++;
       }
     });
@@ -311,35 +321,48 @@ export class Painter {
     o.blooms.slice(-4).forEach((bl, i) => this.aB.set([bl.x, bl.y, bl.start, bl.r], i * 4));
     gl.uniform4fv(u.uBloom, this.aB);
 
-    const soak = o.scene.soak;
-    if (soak && soak.image.width > 0 && this.upload(soak.image)) {
-      gl.uniform4fv(u.uPhotoRect, soak.rect);
-      gl.uniform2fv(u.uPhotoK, soak.k ?? [0.5, 0.45]);
-      gl.uniform1i(u.uPhotoG, soak.wash);
-    } else gl.uniform1i(u.uPhotoG, -1);
-
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
-  private upload(img: HTMLCanvasElement): boolean {
+  /**
+   * The atlas slot holding this photo, uploading it into the least recently used slot if needed.
+   * -1 when it cannot be painted (no CORS headers) or every slot is already in use this frame.
+   */
+  private slotFor(img: HTMLCanvasElement): number {
+    if (img.width !== PHOTO_SIDE || this.failed.has(img)) return -1;
+    const have = this.slots.findIndex((s) => s.image === img);
+    if (have >= 0) {
+      this.slots[have].used = this.frame;
+      return have;
+    }
+    let free = -1;
+    this.slots.forEach((s, i) => {
+      if (s.used < this.frame && (free < 0 || s.used < this.slots[free].used)) free = i;
+    });
+    if (free < 0) return -1;
     const { gl } = this;
-    if (this.texImage === img) return true;
-    if (this.failed.has(img)) return false;
     try {
-      if (!this.tex) this.tex = gl.createTexture();
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this.tex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      this.texImage = img;
-      return true;
+      if (!this.atlas) {
+        this.atlas = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, this.atlas);
+        const side = PHOTO_SIDE * ATLAS_GRID;
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, side, side, 0, gl.RGB, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      } else gl.bindTexture(gl.TEXTURE_2D, this.atlas);
+      const x = (free % ATLAS_GRID) * PHOTO_SIDE;
+      const y = Math.floor(free / ATLAS_GRID) * PHOTO_SIDE;
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, gl.RGB, gl.UNSIGNED_BYTE, img);
+      this.slots[free] = { image: img, used: this.frame };
+      return free;
     } catch {
-      // a photo served without CORS headers cannot be painted; the wash simply stays paint
+      // a photo served without CORS headers cannot be painted; its element shows it plainly instead
       this.failed.add(img);
       img.dispatchEvent(new Event('soakfailed'));
-      return false;
+      return -1;
     }
   }
 

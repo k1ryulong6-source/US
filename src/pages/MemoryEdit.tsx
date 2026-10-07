@@ -23,9 +23,11 @@ export default function MemoryEdit() {
   }
 
   return (
-    <div className="stack-lg">
+    <div className="memory-edit">
       <BackLink to={`/us/${id}/m/${mid}`} />
-      <h1 className="title">{t.memory.editTitle}</h1>
+      <header className="page-head">
+        <h1 className="page-title">{t.memory.editTitle}</h1>
+      </header>
       <MemoryForm
         usId={id}
         existing={memory}

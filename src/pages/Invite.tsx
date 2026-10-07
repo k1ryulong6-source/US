@@ -4,10 +4,14 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { t } from '../strings';
 import ErrorNote from '../components/ErrorNote';
+import Wash from '../components/Wash';
+import { PencilLoop } from '../components/Pencil';
+import { usWash } from '../lib/washes';
 
 interface Preview {
   us_name: string;
   member_names: string[];
+  member_colors: string[] | null;
 }
 
 export default function Invite() {
@@ -62,11 +66,18 @@ export default function Invite() {
   const names = preview.member_names.join('、');
 
   return (
-    <div className="page narrow pad-top stack">
-      <h1 className="title">{t.invite.title(preview.us_name)}</h1>
-      {names && <p className="quiet">{t.invite.whoIsHere(names)}</p>}
+    <div className="page narrow invite-page">
+      {/* the people already here, in their colours, and an empty pencilled place kept for you */}
+      <div className="invite-paint" aria-hidden="true">
+        <Wash className="invite-us" drops={usWash(preview.member_colors ?? [])} seed={1.3} />
+        <span className="invite-place">
+          <PencilLoop width={84} height={76} seed={token.slice(0, 8)} />
+        </span>
+      </div>
+      <h1 className="page-title">{t.invite.title(preview.us_name)}</h1>
+      {names && <p className="quiet center">{t.invite.whoIsHere(names)}</p>}
 
-      <form onSubmit={enter} className="stack">
+      <form onSubmit={enter} className="stack form-column">
         {!session && (
           <label className="field">
             <span>{t.invite.nameLabel}</span>
@@ -79,18 +90,18 @@ export default function Invite() {
             />
           </label>
         )}
-        <button className="primary" disabled={busy || (!session && !name.trim())}>
+        <button className="primary center-self" disabled={busy || (!session && !name.trim())}>
           {busy ? t.invite.entering : t.invite.enter}
         </button>
       </form>
 
       {!session && (
-        <>
-          <Link className="link" to={`/login?next=${encodeURIComponent(`/i/${token}`)}`}>
+        <div className="stack-sm form-column">
+          <Link className="link center-self" to={`/login?next=${encodeURIComponent(`/i/${token}`)}`}>
             {t.invite.haveAccount}
           </Link>
-          <p className="quiet small">{t.invite.guestNote}</p>
-        </>
+          <p className="quiet small center">{t.invite.guestNote}</p>
+        </div>
       )}
       <ErrorNote show={failed} />
     </div>

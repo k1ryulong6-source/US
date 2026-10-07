@@ -176,7 +176,7 @@ const zhCN = {
     enter: '进来吧',
     entering: '正在进入…',
     haveAccount: '我有账号，用邮箱登录',
-    guestNote: '不需要注册。以后想换手机也能找回，可以在「我」里绑定邮箱。',
+    guestNote: '不需要注册。以后想换手机也能找回，可以在 Me 里绑定邮箱。',
   },
   memory: {
     add: '留下一段回忆',

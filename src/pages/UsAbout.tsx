@@ -1,12 +1,17 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useUs } from '../lib/useUs';
-import { formatDate, presetName, todayIso } from '../lib/format';
+import { displayName, formatDate, presetName, todayIso } from '../lib/format';
+import { useSignedUrls } from '../lib/useSignedUrls';
+import { usColors } from '../lib/palette';
+import { CLEAR_WATER } from '../lib/washes';
 import type { HistoryEntry, Invitation, Proposal, ProposalKind, UsPreset, UsState } from '../lib/types';
 import { t } from '../strings';
 import BackLink from '../components/BackLink';
+import Wash from '../components/Wash';
+import { PencilRule } from '../components/Pencil';
 import ErrorNote from '../components/ErrorNote';
 import PresetPicker from '../components/PresetPicker';
 
@@ -30,7 +35,12 @@ export default function UsAbout() {
   const { id } = useParams();
   const { session } = useAuth();
   const me = session?.user.id;
-  const { space, missing, reload } = useUs(id);
+  const { space, members, missing, reload } = useUs(id);
+  const avatars = useSignedUrls(members.map((m) => m.profiles?.avatar_path).filter(Boolean) as string[]);
+  const colors = useMemo(
+    () => usColors(members.map((m) => ({ user_id: m.user_id, color: m.profiles?.color })), me),
+    [members, me],
+  );
 
   const [description, setDescription] = useState('');
   const [descSaved, setDescSaved] = useState(false);
@@ -171,13 +181,41 @@ export default function UsAbout() {
   const activeState: UsState = stateChoices.includes(pState) ? pState : stateChoices[0];
 
   return (
-    <div className="stack-lg">
+    <div className="about-page">
       <BackLink to={`/us/${id}`} />
-      <h1 className="title">{t.about.title}</h1>
+      <header className="page-head">
+        <h1 className="page-title">{space.name}</h1>
+        <p className="page-sub">{t.about.title}</p>
+      </header>
+
+      {/* The people here: each one's own photo soaked in a little clear water, or a drop of their colour */}
+      <section className="about-section">
+        <h2 className="section-label">{t.us.members}</h2>
+        <ul className="members">
+          {members.map((m, i) => {
+            const url = m.profiles?.avatar_path ? avatars[m.profiles.avatar_path] : null;
+            const color = colors.get(m.user_id) ?? '#9C9488';
+            return (
+              <li key={m.user_id}>
+                {url ? (
+                  <Wash className="member-paint" drops={CLEAR_WATER} photo={url} photoK={[0.95, 0.1]} seed={i * 2.3 + 1} flow={0.04} />
+                ) : (
+                  <Wash className="member-paint" drops={[{ x: 0, y: 0, r: 0.5, color, alpha: 0.88 }]} seed={i * 2.3 + 1} flow={0.05} />
+                )}
+                <span className="member-name">
+                  <span className="dot" style={{ background: color }} />
+                  {m.user_id === me ? t.common.you : displayName(m.profiles?.display_name)}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+      <PencilRule />
 
       {/* Description: ordinary content, editable by anyone here */}
-      <section className="stack-sm">
-        <h2 className="subtitle">{t.about.description}</h2>
+      <section className="about-section">
+        <h2 className="section-label">{t.about.description}</h2>
         <form onSubmit={saveDescription} className="stack-sm">
           <textarea
             rows={3}
@@ -199,8 +237,8 @@ export default function UsAbout() {
 
       {/* Invitations */}
       {!closed && (
-        <section className="stack-sm">
-          <h2 className="subtitle">{t.about.invite}</h2>
+        <section className="about-section">
+          <h2 className="section-label">{t.about.invite}</h2>
           <p className="quiet small">{t.about.inviteHint}</p>
           {newLink ? (
             <div className="paper stack-sm">
@@ -238,9 +276,10 @@ export default function UsAbout() {
         </section>
       )}
 
+      <PencilRule />
       {/* Proposals: relationship-defining changes */}
-      <section className="stack-sm">
-        <h2 className="subtitle">{t.about.proposals}</h2>
+      <section className="about-section">
+        <h2 className="section-label">{t.about.proposals}</h2>
         <p className="quiet small">{t.about.proposalsHint}</p>
 
         {proposals.map((p) => (
@@ -342,9 +381,10 @@ export default function UsAbout() {
         )}
       </section>
 
+      <PencilRule />
       {/* Relationship history */}
-      <section className="stack-sm">
-        <h2 className="subtitle">{t.about.history}</h2>
+      <section className="about-section">
+        <h2 className="section-label">{t.about.history}</h2>
         {history.length === 0 ? (
           <p className="quiet small">{t.about.historyEmpty}</p>
         ) : (
@@ -361,8 +401,9 @@ export default function UsAbout() {
         )}
       </section>
 
+      <PencilRule />
       {/* Personal: hide, leave */}
-      <section className="stack-sm">
+      <section className="about-section">
         <button
           className="link"
           onClick={() =>
