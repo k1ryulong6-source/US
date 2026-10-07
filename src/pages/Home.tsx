@@ -118,9 +118,11 @@ export default function Home() {
             </li>
           );
         })}
-        <li className="us-item new">
-          <Link to="/new" className="pencil-link" aria-label={t.home.create}>
+        <li className={items.length ? 'us-item new' : 'us-item new first'}>
+          <Link to="/new" className="pencil-link" aria-label={items.length ? t.home.create : undefined}>
             <PencilLoop width={60} height={60} seed="new-us" />
+            {/* the first time, say what the empty pencil circle is for */}
+            {items.length === 0 && <span className="small quiet">{t.home.create}</span>}
           </Link>
         </li>
       </ul>

@@ -33,9 +33,17 @@ export async function buildExport(onProgress: (done: number, total: number) => v
   const data: Record<string, unknown> = { exported_at: new Date().toISOString() };
   for (const table of TABLES) data[table] = await fetchAll(table);
 
+  const { data: auth } = await supabase.auth.getUser();
+  const me = auth.user?.id;
   const paths = [
     ...(data.memory_media as { storage_path: string }[]).map((m) => m.storage_path),
     ...(data.perspectives as { audio_path: string | null }[]).map((p) => p.audio_path).filter(Boolean),
+    // your own photo (not other people's), and the photos of the US spaces you are in
+    ...(data.profiles as { id: string; avatar_path: string | null }[])
+      .filter((p) => p.id === me)
+      .map((p) => p.avatar_path)
+      .filter(Boolean),
+    ...(data.us_spaces as { cover_path: string | null }[]).map((u) => u.cover_path).filter(Boolean),
   ] as string[];
 
   const files: Zippable = {

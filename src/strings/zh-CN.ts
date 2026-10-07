@@ -323,7 +323,7 @@ const zhCN = {
       'US 数据导出',
       '',
       'data.json 包含你能看到的全部内容：你所在的 US、成员的称呼、关系历程、回忆、各自的版本、想做的事、我看见的你。',
-      'media/ 文件夹里是照片和声音的原始文件，文件路径与 data.json 中的 storage_path / audio_path 对应。',
+      'media/ 文件夹里是照片和声音的原始文件，文件路径与 data.json 中的 storage_path / audio_path / avatar_path / cover_path 对应。',
       '',
       '这份文件只属于你。请妥善保存。',
     ].join('\n'),

@@ -54,7 +54,7 @@
 - `private.is_active_member(us_id)`（security definer）是所有策略的核心：只有**当前**成员（`left_at is null`）才能读写。
 - `private.us_is_open(us_id)`：合上的 US 拒绝任何新增或修改。
 - 结构性变化（建立、加入、离开、提议、改描述、邀请）只能通过 `public.*` 的 security-definer RPC 完成，这些表没有直接的 INSERT/UPDATE/DELETE 权限。
-- 列级权限：`invitations.token_hash` 不可读；`profiles` 只能改 `display_name`；`my_us_prefs` 只能改 `sort_order`、`hidden`。
+- 列级权限：`invitations.token_hash` 不可读；`profiles` 只能改 `display_name`、`color`、`avatar_path`（头像只能指向自己的文件夹）；`my_us_prefs` 只能改 `sort_order`、`hidden`；关系的照片只能通过 `set_us_cover` 改。
 - 视图一律 `security_invoker = true`。
 - `anon` 角色（未登录）对所有表都没有权限，只能调用 `invitation_preview(token)`。
 - 测试：`supabase/tests/*.test.sql`（pgTAP），覆盖非成员、已离开成员、其他 US 的访客、未登录者。
