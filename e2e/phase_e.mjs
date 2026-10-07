@@ -14,7 +14,7 @@ await a.fill('input[maxlength="60"]', '我们俩');
 await a.fill('input[placeholder="比如：朋友、恋人、异地"]', '朋友');
 await a.fill('input[type=date]', '2019-04-01');
 await a.click('text=建好了');
-await a.locator('.page-sub', { hasText: '关于我们' }).waitFor();
+await a.locator('.letter').waitFor();
 const us = a.url().split('/us/')[1].split('/')[0];
 const link = await inviteLink(a, us);
 const b = await phone(browser, errors, 'B', 'Pixel 7');

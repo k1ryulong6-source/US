@@ -60,13 +60,13 @@ export async function createUs(page, name) {
   await page.goto(BASE + '/new');
   await page.fill('input[maxlength="60"]', name);
   await page.click('text=建好了');
-  await page.locator('.page-sub', { hasText: '关于我们' }).waitFor();
+  await page.locator('.letter').waitFor();
   return page.url().split('/us/')[1].split('/')[0];
 }
 
 export async function inviteLink(page, usId) {
   await page.goto(`${BASE}/us/${usId}/about`);
-  await page.click('text=邀请一个人');
+  await page.getByRole('button', { name: '邀请一个人' }).click();
   await page.click('text=生成一个邀请链接');
   return (await page.locator('code').innerText()).trim();
 }

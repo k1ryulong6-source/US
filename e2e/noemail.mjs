@@ -12,6 +12,6 @@ await a.getByRole('link', { name: 'US', exact: true }).waitFor();
 await a.click('text=新建一个 US');
 await a.fill('input[maxlength="60"]', '试一试');
 await a.click('text=建好了');
-await a.locator('.page-sub', { hasText: '关于我们' }).waitFor();
+await a.locator('.letter').waitFor();
 console.log('errors:', errors.length ? errors : 'none', '\nno-email OK');
 await browser.close();

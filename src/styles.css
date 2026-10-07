@@ -1330,111 +1330,82 @@ details > summary::-webkit-details-marker {
   margin-bottom: 6px;
 }
 
-/* the people, close enough that their colours touch */
-.gathering {
-  list-style: none;
-  margin: 8px 0 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 0;
+/* everyone's colour in a ring, running into each other */
+.portrait {
+  position: relative;
+  width: 100%;
+  margin-top: 4px;
 }
-.gathering li {
-  width: 74px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.portrait-wash {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
 }
-.gathering-paint {
-  width: 92px;
-  height: 92px;
-  margin: 0 -9px -8px;
+.portrait-photo {
+  position: absolute;
 }
-.gathering-name {
-  max-width: 70px;
+.portrait-name {
+  position: absolute;
+  transform: translate(-50%, -50%);
   font-size: 11px;
-  letter-spacing: 0.16em;
-  color: var(--ink-soft);
+  letter-spacing: 0.2em;
+  color: var(--pencil);
+  white-space: nowrap;
+  max-width: 90px;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.gathering-add {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0;
-  border-radius: 0;
-}
-.gathering-add .gathering-name {
-  color: var(--ink-faint);
-}
-.gathering-loop {
-  position: relative;
-  width: 92px;
-  height: 92px;
-  margin-bottom: -8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.gathering-loop svg:first-child {
-  position: absolute;
-  inset: 18px;
 }
 
-.about-head {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  text-align: center;
+/* a few handwritten lines */
+.letter {
+  width: 100%;
+  max-width: 300px;
+  margin: -14px auto 0;
+  font-size: 16px;
+  line-height: 2.3;
+  letter-spacing: 0.06em;
+}
+.letter-gap {
   margin-top: 14px;
 }
-.about-name {
-  margin: 0;
-  padding: 2px 0 4px;
-  border-radius: 0;
-  font-size: 17px;
+.letter-name {
+  letter-spacing: 0.2em;
   font-weight: 500;
-  letter-spacing: 0.4em;
-  line-height: 1.5;
-  color: var(--ink);
 }
 /* pencilled = can be changed (together) */
-.pencilled-under {
+.pencilled-word {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
   text-decoration: underline dashed var(--pencil);
   text-decoration-thickness: 1px;
-  text-underline-offset: 8px;
+  text-underline-offset: 7px;
 }
-.about-desc {
-  width: 100%;
-  max-width: 320px;
+.letter-desc {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  margin-top: 8px;
+  align-items: flex-start;
+  gap: 2px;
+  margin-top: 18px;
 }
-.about-desc textarea {
-  text-align: center;
-  font-size: 14px;
-  letter-spacing: 0.08em;
+.letter-desc textarea {
+  font-size: 15px;
+  line-height: 2;
   color: var(--ink-soft);
   min-height: 0;
   resize: none;
   field-sizing: content;
+  border-bottom: 1px dashed var(--line);
 }
 
-.about-block {
+.waiting-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-top: 18px;
-}
-.about-block .section-label {
-  margin: 0;
+  gap: 26px;
+  margin-top: 26px;
 }
 .waiting {
   display: flex;
@@ -1456,67 +1427,16 @@ details > summary::-webkit-details-marker {
   align-self: center;
 }
 
-/* stages one under another, joined by pencil */
-.stages {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.sheet-row-text {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  line-height: 1.6;
 }
-.stages li {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+a.sheet-row {
+  text-decoration: none;
 }
-.stages li + li::before {
-  content: '';
-  height: 26px;
-  border-left: 1px dashed var(--pencil);
-  opacity: 0.55;
-  margin-bottom: 4px;
-}
-.stage-since {
-  font-size: 10px;
-  letter-spacing: 0.2em;
-  color: var(--pencil);
-  font-variant-numeric: oldstyle-nums;
-}
-.stage-name {
-  font-size: 15px;
-  letter-spacing: 0.3em;
-  color: var(--ink-soft);
-  padding-left: 0.3em;
-}
-.stages li.now .stage-name {
-  color: var(--ink);
-}
-.stage-add {
-  align-self: center;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-  border-radius: 0;
-  font-size: 13px;
-  letter-spacing: 0.12em;
-  color: var(--ink-faint);
-}
-
-.about-quiet {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  text-align: center;
-  padding-bottom: 12px;
-}
-.about-quiet .link {
-  align-self: center;
-}
-.about-quiet .quiet {
-  margin-top: -10px;
+.sheet-row.danger {
+  color: var(--danger);
 }
 
 .sheet-body {

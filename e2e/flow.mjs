@@ -49,10 +49,10 @@ await a.click('text=伴侣');
 await a.fill('input[maxlength="40"]', '朋友');
 await a.screenshot({ path: `${shots}/03-create.png`, fullPage: true });
 await a.click('text=建好了');
-await a.locator('.page-sub', { hasText: '关于我们' }).waitFor();
+await a.locator('.letter').waitFor();
 
 // Invite link
-await a.click('text=邀请一个人');
+await a.getByRole('button', { name: '邀请一个人' }).click();
 await a.click('text=生成一个邀请链接');
 const link = (await a.locator('code').innerText()).trim();
 await a.screenshot({ path: `${shots}/04-about.png`, fullPage: true });
@@ -73,7 +73,7 @@ if (b.url().includes('/i/')) throw new Error('token still in url');
 
 // Alice proposes a rename; it waits for the guest
 await a.reload();
-await a.getByRole('button', { name: '改名字或标签' }).click();
+await a.getByRole('button', { name: '换一个名字' }).click();
 await a.fill('input[placeholder="新名字"]', '我们');
 await a.click('text=提出来');
 await a.getByText('你已经同意了，等其他人看看。').waitFor();
@@ -108,6 +108,7 @@ await c.getByText('这个链接已经用过').waitFor();
 await a.goto(BASE + '/');
 await a.click('.us-wash-name:has-text("我们")');
 await a.click('text=About');
+await a.getByRole('button', { name: '更多' }).click();
 await a.click('text=从我的视野里收起');
 await a.goto(BASE + '/');
 await a.getByText('收起来的（1）').waitFor();

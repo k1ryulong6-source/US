@@ -77,6 +77,17 @@ export function PencilRule() {
   );
 }
 
+/** Three pencil dots: more, tucked away. */
+export function PencilMore({ size = 22 }: { size?: number }) {
+  return (
+    <svg className="pencil" width={size} height={size} viewBox="0 0 22 22" aria-hidden="true">
+      <path d="M4.6 11.2 C 4.9 10.6, 5.8 10.7, 5.8 11.3 C 5.7 11.9, 4.8 11.9, 4.7 11.3" strokeWidth="1.1" />
+      <path d="M10.5 10.9 C 10.9 10.4, 11.8 10.6, 11.7 11.2 C 11.6 11.8, 10.6 11.8, 10.6 11.1" strokeWidth="1.1" />
+      <path d="M16.4 11.1 C 16.7 10.5, 17.6 10.6, 17.6 11.2 C 17.5 11.8, 16.6 11.9, 16.5 11.2" strokeWidth="1.1" />
+    </svg>
+  );
+}
+
 export function BackChevron() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" aria-hidden="true">
