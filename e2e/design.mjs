@@ -139,7 +139,7 @@ const state = await a.evaluate(() => JSON.stringify(localStorage));
 await nogl.goto(BASE + '/login');
 await nogl.evaluate((s) => Object.entries(JSON.parse(s)).forEach(([k, v]) => localStorage.setItem(k, v)), state);
 await nogl.goto(`${BASE}/us/${us}`);
-await nogl.locator('.wash-photo-plain').first().waitFor();
+await nogl.locator('.painted-photo-img').first().waitFor();
 await shot(nogl, 'x1-no-webgl');
 
 await browser.close();

@@ -12,6 +12,7 @@ import { colorOf } from '../lib/palette';
 import Palette from '../components/Palette';
 import Wash from '../components/Wash';
 import PhotoSheet from '../components/PhotoSheet';
+import PaintedPhoto from '../components/PaintedPhoto';
 import Sheet from '../components/Sheet';
 import { startMove } from '../lib/transfer';
 import { PencilCamera, PencilMore, PencilRule } from '../components/Pencil';
@@ -138,15 +139,18 @@ export default function Me() {
 
       {/* you: your colour, and your photo soaked into it when you have one */}
       <button type="button" className="me-portrait" onClick={() => setSheet(true)} aria-label={t.photo.avatar}>
-        <Wash
-          className="me-wash"
-          drops={[
-            { x: -0.12, y: -0.1, r: 0.66, color: mine, alpha: avatarUrl ? 0.7 : 0.9 },
-            { x: 0.32, y: 0.3, r: 0.4, color: mine, alpha: 0.85 },
-          ]}
-          photo={avatarUrl}
-          seed={1.9}
-        />
+        {avatarUrl ? (
+          <PaintedPhoto className="me-wash" url={avatarUrl} colors={[mine]} seed={1.9} />
+        ) : (
+          <Wash
+            className="me-wash"
+            drops={[
+              { x: -0.12, y: -0.1, r: 0.66, color: mine, alpha: 0.9 },
+              { x: 0.32, y: 0.3, r: 0.4, color: mine, alpha: 0.85 },
+            ]}
+            seed={1.9}
+          />
+        )}
         {!avatarUrl && (
           <span className="me-photo-hint">
             <PencilCamera size={18} />

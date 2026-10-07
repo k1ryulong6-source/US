@@ -16,6 +16,7 @@ import IntentionItem from '../components/IntentionItem';
 import Wash from '../components/Wash';
 import WetDrop from '../components/WetDrop';
 import PhotoSheet from '../components/PhotoSheet';
+import PaintedPhoto from '../components/PaintedPhoto';
 import ErrorNote from '../components/ErrorNote';
 import { BackChevron, PencilCamera, PencilLoop, PencilPlus } from '../components/Pencil';
 
@@ -144,7 +145,7 @@ export default function UsPage() {
       <header className="us-head">
         <button type="button" className="cover" onClick={() => !closed && setSheet(true)} aria-label={t.photo.cover} disabled={closed}>
           {coverUrl ? (
-            <Wash className="cover-wash" drops={pool(together)} photo={coverUrl} seed={9.1} flow={0.04} />
+            <PaintedPhoto className="cover-wash" url={coverUrl} colors={together} seed={9.1} />
           ) : (
             <span className="cover-empty">
               <PencilLoop width={78} height={78} seed={`cover-${space.id}`} />

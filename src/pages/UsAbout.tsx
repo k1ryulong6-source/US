@@ -65,10 +65,9 @@ function Portrait({
   const colorAt = (i: number) => colors.get(members[i].user_id) ?? '#9C9488';
 
   // one wash the size of the portrait: positions in units of its half-height
-  const drops: Drop[] = members.map((m, i) => {
+  const drops: Drop[] = members.map((_, i) => {
     const { dx, dy } = at(i);
-    const photo = Boolean(m.profiles?.avatar_path);
-    return { x: (dx * ring) / half, y: (dy * ring) / half, r: (size * 0.31) / half, color: colorAt(i), alpha: photo ? 0.5 : 0.85 };
+    return { x: (dx * ring) / half, y: (dy * ring) / half, r: (size * 0.31) / half, color: colorAt(i), alpha: 0.85 };
   });
   if (n >= 2) {
     members.slice(0, 12).forEach((_, i) => {
@@ -97,13 +96,11 @@ function Portrait({
         return (
           <div key={m.user_id}>
             {url && (
-              <Wash
-                className="portrait-photo"
-                style={{ width: size, height: size, left: `calc(50% + ${dx * ring - size / 2}px)`, top: half + dy * ring - size / 2 }}
-                drops={[{ x: 0, y: 0, r: 0.62, color: colorAt(i), alpha: 0.75 }]}
-                photo={url}
-                seed={i * 2.3 + 1}
-                flow={0.04}
+              <img
+                className="portrait-img"
+                src={url}
+                alt=""
+                style={{ width: size * 0.56, height: size * 0.56, left: `calc(50% + ${dx * ring - size * 0.28}px)`, top: half + dy * ring - size * 0.28 }}
               />
             )}
             {named && (
