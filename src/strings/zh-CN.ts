@@ -46,6 +46,8 @@ const zhCN = {
   login: {
     title: '欢迎回来',
     intro: '这里只属于你和你在乎的人。',
+    noEmail: '先不用邮箱，直接开始',
+    noEmailHint: '身份只保存在这台手机的这个浏览器里。换手机或清除浏览器数据就找不回来了，之后可以在 Me 里绑定邮箱。',
     emailLabel: '你的邮箱',
     emailPlaceholder: 'name@example.com',
     sendCode: '发送验证码',

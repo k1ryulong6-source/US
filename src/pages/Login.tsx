@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { t } from '../strings';
@@ -14,6 +14,7 @@ export default function Login() {
   const { session, isGuest } = useAuth();
   const [params] = useSearchParams();
   const next = safeNext(params.get('next'));
+  const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -22,6 +23,16 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
 
   if (session && !isGuest) return <Navigate to={next} replace />;
+
+  // No email at all: a guest identity kept in this browser. Can be tied to an email later in Me.
+  async function startAsGuest() {
+    setBusy(true);
+    setError(null);
+    const { error } = await supabase.auth.signInAnonymously();
+    setBusy(false);
+    if (error) return setError(t.common.somethingWrong);
+    navigate(next, { replace: true });
+  }
 
   async function sendCode(e: FormEvent) {
     e.preventDefault();
@@ -75,6 +86,14 @@ export default function Login() {
           <button className="primary" disabled={busy}>
             {busy ? t.login.sending : t.login.sendCode}
           </button>
+          {!session && (
+            <div className="stack-sm">
+              <button type="button" className="link" disabled={busy} onClick={startAsGuest}>
+                {t.login.noEmail}
+              </button>
+              <p className="quiet small">{t.login.noEmailHint}</p>
+            </div>
+          )}
         </form>
       ) : (
         <form onSubmit={verify} className="stack">
