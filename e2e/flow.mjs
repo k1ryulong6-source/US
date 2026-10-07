@@ -52,6 +52,7 @@ await a.click('text=建好了');
 await a.locator('.page-sub', { hasText: '关于我们' }).waitFor();
 
 // Invite link
+await a.click('text=邀请一个人');
 await a.click('text=生成一个邀请链接');
 const link = (await a.locator('code').innerText()).trim();
 await a.screenshot({ path: `${shots}/04-about.png`, fullPage: true });
@@ -72,7 +73,7 @@ if (b.url().includes('/i/')) throw new Error('token still in url');
 
 // Alice proposes a rename; it waits for the guest
 await a.reload();
-await a.click('text=提一个建议');
+await a.getByRole('button', { name: '改名字或标签' }).click();
 await a.fill('input[placeholder="新名字"]', '我们');
 await a.click('text=提出来');
 await a.getByText('你已经同意了，等其他人看看。').waitFor();
@@ -83,7 +84,7 @@ await b.getByText('有一个提议，等你看看。').waitFor();
 await b.screenshot({ path: `${shots}/07-guest-proposal-note.png` });
 await b.click('text=有一个提议，等你看看。');
 await b.click('button:has-text("同意")');
-await b.getByText('一起决定的事').waitFor();
+await b.locator('.waiting').waitFor({ state: 'detached' });
 await sleep(500);
 await b.goto(BASE + '/');
 await b.getByText('我们', { exact: true }).waitFor();

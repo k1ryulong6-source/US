@@ -66,6 +66,7 @@ export async function createUs(page, name) {
 
 export async function inviteLink(page, usId) {
   await page.goto(`${BASE}/us/${usId}/about`);
+  await page.click('text=邀请一个人');
   await page.click('text=生成一个邀请链接');
   return (await page.locator('code').innerText()).trim();
 }

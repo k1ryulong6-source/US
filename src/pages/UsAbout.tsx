@@ -3,7 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth';
 import { useUs } from '../lib/useUs';
-import { displayName, formatDate, presetName, todayIso } from '../lib/format';
+import { displayName, formatDate, formatMemoryDate, presetName, todayIso } from '../lib/format';
 import { useSignedUrls } from '../lib/useSignedUrls';
 import { usColors } from '../lib/palette';
 import { CLEAR_WATER } from '../lib/washes';
@@ -11,11 +11,15 @@ import type { HistoryEntry, Invitation, Proposal, ProposalKind, UsPreset, UsStat
 import { t } from '../strings';
 import BackLink from '../components/BackLink';
 import Wash from '../components/Wash';
-import { PencilRule } from '../components/Pencil';
+import WetDrop from '../components/WetDrop';
+import Sheet from '../components/Sheet';
+import { PencilLoop, PencilPlus, PencilRule } from '../components/Pencil';
 import ErrorNote from '../components/ErrorNote';
 import PresetPicker from '../components/PresetPicker';
 
 const STATES: UsState[] = ['active', 'quiet', 'closed'];
+const formatMonth = (iso: string) => formatMemoryDate(iso, 'month');
+type SheetKind = 'invite' | 'name' | 'stage' | 'state';
 
 function describeProposal(p: Proposal): string {
   const v = p.payload;
@@ -25,10 +29,21 @@ function describeProposal(p: Proposal): string {
     case 'relabel':
       return t.about.proposalText.relabel(presetName((v.preset_label as UsPreset) ?? null) || t.presets.none);
     case 'stage':
-      return t.about.proposalText.stage(v.stage ?? '', formatDate(v.happened_on));
+      return t.about.proposalText.stage(v.stage ?? '', formatDate(v.happened_on) || t.about.historyUnknownDate);
     case 'state':
       return t.about.proposalText.state(t.about.stateOptions[(v.state as UsState) ?? 'active']);
   }
+}
+
+/** The stages in the order they happened: 室友 → 朋友 → 家人, each with the date it began. */
+function stageChain(history: HistoryEntry[], current: string | null) {
+  const steps: { stage: string; since: string | null }[] = [];
+  for (const h of [...history].reverse()) {
+    if (!steps.length && h.from_stage) steps.push({ stage: h.from_stage, since: null });
+    if (h.to_stage) steps.push({ stage: h.to_stage, since: h.happened_on });
+  }
+  if (!steps.length && current) steps.push({ stage: current, since: null });
+  return steps;
 }
 
 export default function UsAbout() {
@@ -52,8 +67,9 @@ export default function UsAbout() {
   const [answered, setAnswered] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [failed, setFailed] = useState(false);
+  const [sheet, setSheet] = useState<SheetKind | null>(null);
 
-  // new proposal form
+  // the proposal being written in a sheet
   const [kind, setKind] = useState<ProposalKind>('rename');
   const [pName, setPName] = useState('');
   const [pPreset, setPPreset] = useState<UsPreset | null>(null);
@@ -110,6 +126,8 @@ export default function UsAbout() {
     if (space) setDescription(space.description);
   }, [space]);
 
+  const closeSheet = useCallback(() => setSheet(null), []);
+
   if (missing) return <Navigate to="/" replace />;
   if (!space || !id) return <p className="quiet center pad">{t.common.loading}</p>;
 
@@ -153,6 +171,15 @@ export default function UsAbout() {
     setCopied(true);
   }
 
+  const stateChoices = STATES.filter((s) => s !== space.state);
+  const pendingKinds = new Set(proposals.map((p) => p.kind));
+  const can = (k: ProposalKind) => !pendingKinds.has(k) && (!closed || k === 'state');
+  const nameKinds = (['rename', 'relabel'] as ProposalKind[]).filter(can);
+  // the kind the open sheet is about; the name sheet lets you switch between name and label
+  const activeKind: ProposalKind =
+    sheet === 'stage' ? 'stage' : sheet === 'state' ? 'state' : nameKinds.includes(kind) ? kind : nameKinds[0];
+  const activeState: UsState = stateChoices.includes(pState) ? pState : stateChoices[0];
+
   async function submitProposal(e: FormEvent) {
     e.preventDefault();
     const payload =
@@ -169,163 +196,215 @@ export default function UsAbout() {
     if (ok) {
       setPName('');
       setPStage('');
+      setSheet(null);
     }
   }
 
-  const stateChoices = STATES.filter((s) => s !== space.state);
-  const pendingKinds = new Set(proposals.map((p) => p.kind));
-  const allKinds: ProposalKind[] = closed ? ['state'] : ['rename', 'relabel', 'stage', 'state'];
-  const kinds = allKinds.filter((k) => !pendingKinds.has(k));
-  // Fall back to a kind / state that is actually offered.
-  const activeKind: ProposalKind = kinds.includes(kind) ? kind : kinds[0];
-  const activeState: UsState = stateChoices.includes(pState) ? pState : stateChoices[0];
+  const nameOf = (uid: string | null) => {
+    if (uid === me) return t.common.you;
+    return displayName(members.find((m) => m.user_id === uid)?.profiles?.display_name);
+  };
+  const chain = stageChain(history, space.stage);
+  const preset = presetName(space.preset_label);
 
   return (
     <div className="about-page">
       <BackLink to={`/us/${id}`} />
-      <header className="page-head">
-        <h1 className="page-title">{space.name}</h1>
-        <p className="page-sub">{t.about.title}</p>
-      </header>
 
-      {/* The people here: each one's own photo soaked in a little clear water, or a drop of their colour */}
-      <section className="about-section">
-        <h2 className="section-label">{t.us.members}</h2>
-        <ul className="members">
-          {members.map((m, i) => {
-            const url = m.profiles?.avatar_path ? avatars[m.profiles.avatar_path] : null;
-            const color = colors.get(m.user_id) ?? '#9C9488';
-            return (
-              <li key={m.user_id}>
-                {url ? (
-                  <Wash className="member-paint" drops={CLEAR_WATER} photo={url} photoK={[0.95, 0.1]} seed={i * 2.3 + 1} flow={0.04} />
-                ) : (
-                  <Wash className="member-paint" drops={[{ x: 0, y: 0, r: 0.5, color, alpha: 0.88 }]} seed={i * 2.3 + 1} flow={0.05} />
-                )}
-                <span className="member-name">
-                  <span className="dot" style={{ background: color }} />
-                  {m.user_id === me ? t.common.you : displayName(m.profiles?.display_name)}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-      <PencilRule />
+      {/* The people here, side by side so their colours touch; an empty pencilled place for whoever comes next */}
+      <ul className="gathering" aria-label={t.us.members}>
+        {members.map((m, i) => {
+          const url = m.profiles?.avatar_path ? avatars[m.profiles.avatar_path] : null;
+          const color = colors.get(m.user_id) ?? '#9C9488';
+          return (
+            <li key={m.user_id}>
+              {url ? (
+                <Wash className="gathering-paint" drops={CLEAR_WATER} photo={url} photoK={[0.95, 0.1]} seed={i * 2.3 + 1} flow={0.04} />
+              ) : (
+                <Wash
+                  className="gathering-paint"
+                  drops={[{ x: 0, y: 0, r: 0.56, color, alpha: 0.86 }]}
+                  seed={i * 2.3 + 1}
+                  flow={0.05}
+                />
+              )}
+              <span className="gathering-name">{m.user_id === me ? t.common.you : displayName(m.profiles?.display_name)}</span>
+            </li>
+          );
+        })}
+        {!closed && (
+          <li>
+            <button type="button" className="gathering-add" onClick={() => setSheet('invite')}>
+              <span className="gathering-loop">
+                <PencilLoop width={56} height={56} seed={`invite-${id}`} />
+                <PencilPlus size={14} />
+              </span>
+              <span className="gathering-name">{t.about.inviteOne}</span>
+            </button>
+          </li>
+        )}
+      </ul>
 
-      {/* Description: ordinary content, editable by anyone here */}
-      <section className="about-section">
-        <h2 className="section-label">{t.about.description}</h2>
-        <form onSubmit={saveDescription} className="stack-sm">
+      {/* Name and words: the name changes only together; the words anyone can rewrite */}
+      <header className="about-head">
+        {nameKinds.length > 0 ? (
+          <button type="button" className="about-name pencilled-under" onClick={() => setSheet('name')} aria-label={t.about.changeName}>
+            {space.name}
+          </button>
+        ) : (
+          <h1 className="about-name">{space.name}</h1>
+        )}
+        <p className="page-sub">{preset ? `${t.about.title} · ${preset}` : t.about.title}</p>
+        <form onSubmit={saveDescription} className="about-desc">
           <textarea
-            rows={3}
+            rows={2}
             maxLength={500}
             disabled={closed}
             value={description}
             placeholder={t.about.descriptionPlaceholder}
+            aria-label={t.about.descriptionPlaceholder}
             onChange={(e) => {
               setDescription(e.target.value);
               setDescSaved(false);
             }}
           />
           {!closed && description !== space.description && (
-            <button className="secondary">{t.common.save}</button>
+            <button className="link center-self">{t.common.save}</button>
           )}
-          {descSaved && <span className="quiet small">{t.common.saved}</span>}
+          {descSaved && description === space.description && <span className="quiet small">{t.common.saved}</span>}
         </form>
-      </section>
+      </header>
 
-      {/* Invitations */}
-      {!closed && (
-        <section className="about-section">
-          <h2 className="section-label">{t.about.invite}</h2>
-          <p className="quiet small">{t.about.inviteHint}</p>
-          {newLink ? (
-            <div className="paper stack-sm">
-              <code className="break">{newLink}</code>
-              <div className="row">
-                <button className="primary" onClick={shareInvite}>
-                  {'share' in navigator ? t.about.share : t.about.copy}
-                </button>
-                {copied && <span className="quiet small">{t.about.copied}</span>}
-              </div>
-            </div>
-          ) : (
-            <button className="secondary" onClick={createInvite}>
-              {t.about.createInvite}
-            </button>
-          )}
-          {invites.length > 0 && (
-            <details>
-              <summary className="quiet small">{t.about.openInvites}</summary>
-              <ul className="plain">
-                {invites.map((inv) => (
-                  <li key={inv.id} className="row between">
-                    <span className="small">{t.about.inviteCreatedAt(formatDate(inv.created_at))}</span>
-                    <button
-                      className="link"
-                      onClick={() => run(() => supabase.rpc('revoke_invitation', { p_invitation: inv.id }))}
-                    >
-                      {t.about.revoke}
+      {/* What is waiting for everyone: a wet drop in the colour of whoever asked */}
+      {proposals.length > 0 && (
+        <section className="about-block" aria-label={t.about.waiting}>
+          <p className="section-label center">{t.about.waiting}</p>
+          {proposals.map((p) => (
+            <div key={p.id} className="waiting">
+              <WetDrop color={colors.get(p.proposed_by ?? '') ?? '#9C9488'} size={22} />
+              <span className="small quiet">{t.about.proposedBy(nameOf(p.proposed_by))}</span>
+              <p>{describeProposal(p)}</p>
+              {answered.has(p.id) ? (
+                <div className="row">
+                  <span className="quiet small">{t.about.waitingOthers}</span>
+                  {p.proposed_by === me && (
+                    <button className="link" onClick={() => run(() => supabase.rpc('withdraw_proposal', { p_proposal: p.id }))}>
+                      {t.about.withdraw}
                     </button>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
+                  )}
+                </div>
+              ) : (
+                <div className="row">
+                  <button
+                    className="primary"
+                    onClick={() => run(() => supabase.rpc('respond_to_proposal', { p_proposal: p.id, p_answer: 'accept' }))}
+                  >
+                    {t.about.accept}
+                  </button>
+                  <button
+                    className="link"
+                    onClick={() => run(() => supabase.rpc('respond_to_proposal', { p_proposal: p.id, p_answer: 'decline' }))}
+                  >
+                    {t.about.decline}
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
         </section>
       )}
 
-      <PencilRule />
-      {/* Proposals: relationship-defining changes */}
-      <section className="about-section">
-        <h2 className="section-label">{t.about.proposals}</h2>
-        <p className="quiet small">{t.about.proposalsHint}</p>
+      {/* The stages, one under another on a pencil line; a pencilled plus for the next one */}
+      <section className="about-block" aria-label={t.about.history}>
+        <p className="section-label center">{t.about.history}</p>
+        <ol className="stages">
+          {chain.map((s, i) => (
+            <li key={i} className={i === chain.length - 1 ? 'now' : undefined}>
+              {s.since && <span className="stage-since">{formatMonth(s.since)}</span>}
+              <span className="stage-name">{s.stage}</span>
+            </li>
+          ))}
+        </ol>
+        {can('stage') && (
+          <button type="button" className="stage-add" onClick={() => setSheet('stage')}>
+            <PencilPlus size={16} />
+            <span>{chain.length ? t.about.changeStage : t.about.historyEmpty}</span>
+          </button>
+        )}
+      </section>
 
-        {proposals.map((p) => (
-          <div key={p.id} className="paper stack-sm">
-            <p>{describeProposal(p)}</p>
-            {answered.has(p.id) ? (
-              <div className="row between">
-                <span className="quiet small">{t.about.waitingOthers}</span>
-                {p.proposed_by === me && (
-                  <button
-                    className="link"
-                    onClick={() => run(() => supabase.rpc('withdraw_proposal', { p_proposal: p.id }))}
-                  >
-                    {t.about.withdraw}
+      <PencilRule />
+
+      {/* Only for me, and the way out */}
+      <nav className="about-quiet">
+        {can('state') && (
+          <button type="button" className="link" onClick={() => setSheet('state')}>
+            {t.about.stateLink[space.state]}
+          </button>
+        )}
+        <button
+          className="link"
+          onClick={() =>
+            run(() => supabase.from('my_us_prefs').update({ hidden: !hidden }).eq('us_id', id).eq('user_id', me!))
+          }
+        >
+          {hidden ? t.about.unhide : t.about.hide}
+        </button>
+        {!hidden && <p className="quiet small">{t.about.hideHint}</p>}
+        <Link to={`/us/${id}/leave`} className="link danger">
+          {t.about.leave}
+        </Link>
+      </nav>
+
+      <ErrorNote show={failed} />
+
+      {sheet === 'invite' && (
+        <Sheet title={t.about.inviteOne} onClose={closeSheet}>
+          <div className="sheet-body">
+            <p className="quiet small">{t.about.inviteHint}</p>
+            {newLink ? (
+              <>
+                <code className="break invite-link">{newLink}</code>
+                <div className="row">
+                  <button className="primary" onClick={shareInvite}>
+                    {'share' in navigator ? t.about.share : t.about.copy}
                   </button>
-                )}
-              </div>
+                  {copied && <span className="quiet small">{t.about.copied}</span>}
+                </div>
+              </>
             ) : (
-              <div className="row">
-                <button
-                  className="primary"
-                  onClick={() =>
-                    run(() => supabase.rpc('respond_to_proposal', { p_proposal: p.id, p_answer: 'accept' }))
-                  }
-                >
-                  {t.about.accept}
-                </button>
-                <button
-                  className="secondary"
-                  onClick={() =>
-                    run(() => supabase.rpc('respond_to_proposal', { p_proposal: p.id, p_answer: 'decline' }))
-                  }
-                >
-                  {t.about.decline}
-                </button>
-              </div>
+              <button className="primary self-start" onClick={createInvite}>
+                {t.about.createInvite}
+              </button>
+            )}
+            {invites.length > 0 && (
+              <details>
+                <summary className="quiet small">{t.about.openInvites}</summary>
+                <ul className="plain pad-top-sm">
+                  {invites.map((inv) => (
+                    <li key={inv.id} className="row between">
+                      <span className="small">{t.about.inviteCreatedAt(formatDate(inv.created_at))}</span>
+                      <button className="link" onClick={() => run(() => supabase.rpc('revoke_invitation', { p_invitation: inv.id }))}>
+                        {t.about.revoke}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             )}
           </div>
-        ))}
+        </Sheet>
+      )}
 
-        {kinds.length > 0 && (
-          <details>
-            <summary className="link">{t.about.newProposal}</summary>
-            <form onSubmit={submitProposal} className="stack-sm pad-top-sm">
+      {(sheet === 'name' || sheet === 'stage' || sheet === 'state') && (
+        <Sheet
+          title={sheet === 'name' ? t.about.changeName : sheet === 'stage' ? t.about.changeStage : t.about.changeState}
+          onClose={closeSheet}
+        >
+          <form onSubmit={submitProposal} className="sheet-body">
+            {sheet === 'name' && nameKinds.length > 1 && (
               <div className="chips" role="radiogroup" aria-label={t.about.proposalKind}>
-                {kinds.map((k) => (
+                {nameKinds.map((k) => (
                   <button
                     key={k}
                     type="button"
@@ -338,93 +417,35 @@ export default function UsAbout() {
                   </button>
                 ))}
               </div>
-
-              {activeKind === 'rename' && (
-                <input
-                  required
-                  maxLength={60}
-                  value={pName}
-                  placeholder={t.about.newName}
-                  onChange={(e) => setPName(e.target.value)}
-                />
-              )}
-              {activeKind === 'relabel' && <PresetPicker value={pPreset} onChange={setPPreset} />}
-              {activeKind === 'stage' && (
-                <>
-                  <input
-                    required
-                    maxLength={40}
-                    value={pStage}
-                    placeholder={t.about.newStage}
-                    onChange={(e) => setPStage(e.target.value)}
-                  />
-                  <label className="field">
-                    <span>{t.about.stageDate}</span>
-                    <input type="date" value={pStageDate} onChange={(e) => setPStageDate(e.target.value)} />
+            )}
+            {activeKind === 'rename' && (
+              <input required maxLength={60} value={pName} placeholder={t.about.newName} onChange={(e) => setPName(e.target.value)} />
+            )}
+            {activeKind === 'relabel' && <PresetPicker value={pPreset} onChange={setPPreset} />}
+            {activeKind === 'stage' && (
+              <>
+                <input required maxLength={40} value={pStage} placeholder={t.about.newStage} onChange={(e) => setPStage(e.target.value)} />
+                <label className="field">
+                  <span>{t.about.stageDate}</span>
+                  <input type="date" value={pStageDate} onChange={(e) => setPStageDate(e.target.value)} />
+                </label>
+              </>
+            )}
+            {activeKind === 'state' && (
+              <div className="stack-sm" role="radiogroup" aria-label={t.about.changeState}>
+                {stateChoices.map((s) => (
+                  <label key={s} className="radio">
+                    <input type="radio" name="state" checked={activeState === s} onChange={() => setPState(s)} />
+                    {t.about.stateOptions[s]}
                   </label>
-                </>
-              )}
-              {activeKind === 'state' && (
-                <div className="stack-sm" role="radiogroup" aria-label={t.about.newState}>
-                  {stateChoices.map((s) => (
-                    <label key={s} className="radio">
-                      <input type="radio" name="state" checked={activeState === s} onChange={() => setPState(s)} />
-                      {t.about.stateOptions[s]}
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              <button className="secondary">{t.about.propose}</button>
-            </form>
-          </details>
-        )}
-      </section>
-
-      <PencilRule />
-      {/* Relationship history */}
-      <section className="about-section">
-        <h2 className="section-label">{t.about.history}</h2>
-        {history.length === 0 ? (
-          <p className="quiet small">{t.about.historyEmpty}</p>
-        ) : (
-          <ol className="plain history">
-            {history.map((h) => (
-              <li key={h.id}>
-                <span className="quiet small">
-                  {h.happened_on ? formatDate(h.happened_on) : t.about.historyUnknownDate}
-                </span>
-                <span>{[h.from_stage, h.to_stage].filter(Boolean).join(' → ')}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
-
-      <PencilRule />
-      {/* Personal: hide, leave */}
-      <section className="about-section">
-        <button
-          className="link"
-          onClick={() =>
-            run(() =>
-              supabase
-                .from('my_us_prefs')
-                .update({ hidden: !hidden })
-                .eq('us_id', id)
-                .eq('user_id', me!),
-            )
-          }
-        >
-          {hidden ? t.about.unhide : t.about.hide}
-        </button>
-        {!hidden && <p className="quiet small">{t.about.hideHint}</p>}
-        <Link to={`/us/${id}/leave`} className="link danger">
-          {t.about.leave}
-        </Link>
-      </section>
-
-      <ErrorNote show={failed} />
+                ))}
+              </div>
+            )}
+            <p className="quiet small">{t.about.togetherHint}</p>
+            <button className="primary self-start">{t.about.propose}</button>
+          </form>
+        </Sheet>
+      )}
     </div>
   );
 }

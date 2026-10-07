@@ -1330,42 +1330,201 @@ details > summary::-webkit-details-marker {
   margin-bottom: 6px;
 }
 
-.about-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 6px 0;
-}
-.members {
+/* the people, close enough that their colours touch */
+.gathering {
   list-style: none;
-  margin: 0;
+  margin: 8px 0 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
-  gap: 14px 6px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 0;
 }
-.members li {
+.gathering li {
+  width: 74px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
 }
-.member-paint {
-  width: 64px;
-  height: 64px;
+.gathering-paint {
+  width: 92px;
+  height: 92px;
+  margin: 0 -9px -8px;
 }
-.member-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  letter-spacing: 0.12em;
+.gathering-name {
+  max-width: 70px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
   color: var(--ink-soft);
-  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.about-page code {
+.gathering-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  border-radius: 0;
+}
+.gathering-add .gathering-name {
+  color: var(--ink-faint);
+}
+.gathering-loop {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  margin-bottom: -8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gathering-loop svg:first-child {
+  position: absolute;
+  inset: 18px;
+}
+
+.about-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+  margin-top: 14px;
+}
+.about-name {
+  margin: 0;
+  padding: 2px 0 4px;
+  border-radius: 0;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: 0.4em;
+  line-height: 1.5;
+  color: var(--ink);
+}
+/* pencilled = can be changed (together) */
+.pencilled-under {
+  text-decoration: underline dashed var(--pencil);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 8px;
+}
+.about-desc {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+}
+.about-desc textarea {
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  min-height: 0;
+  resize: none;
+  field-sizing: content;
+}
+
+.about-block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 18px;
+}
+.about-block .section-label {
+  margin: 0;
+}
+.waiting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  line-height: 1.6;
+}
+.waiting .row {
+  justify-content: center;
+  gap: 22px;
+  margin-top: 6px;
+}
+.waiting .primary {
+  padding: 8px 24px;
+}
+.waiting .row .link {
+  align-self: center;
+}
+
+/* stages one under another, joined by pencil */
+.stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.stages li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.stages li + li::before {
+  content: '';
+  height: 26px;
+  border-left: 1px dashed var(--pencil);
+  opacity: 0.55;
+  margin-bottom: 4px;
+}
+.stage-since {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--pencil);
+  font-variant-numeric: oldstyle-nums;
+}
+.stage-name {
+  font-size: 15px;
+  letter-spacing: 0.3em;
+  color: var(--ink-soft);
+  padding-left: 0.3em;
+}
+.stages li.now .stage-name {
+  color: var(--ink);
+}
+.stage-add {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-radius: 0;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--ink-faint);
+}
+
+.about-quiet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  padding-bottom: 12px;
+}
+.about-quiet .link {
+  align-self: center;
+}
+.about-quiet .quiet {
+  margin-top: -10px;
+}
+
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.invite-link {
   font-size: 12px;
+  color: var(--ink-soft);
 }
