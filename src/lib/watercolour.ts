@@ -73,6 +73,29 @@ export const PHOTO_SIDE = 512;
 const ATLAS_GRID = 4;
 const MAX_RIBBON = 16;
 
+// The paper's grain doesn't move: it comes from a small noise texture made once, not from
+// noise computed for every pixel of every frame.
+const GRAIN_SIDE = 256;
+const GRAIN_GLSL = [
+  'float gn(vec2 x){return texture2D(uGrain,x/256.).r*1.4-.7;}',
+  'float gfbm(vec2 x){return .5*gn(x)+.25*gn(R*x+vec2(37.,11.))+.125*gn(R*R*x+vec2(5.,71.));}',
+  '#define PAPER (.975+.02*gfbm(pp*.08)+.012*gn(pp*1.7))',
+].join('\n');
+
+/** Bare paper, for everywhere no paint lies: the same colour the paint shader gives an empty spot. */
+const FS_PAPER = [
+  'precision highp float;',
+  'uniform vec2 uRes;uniform float uDpr;uniform vec2 uScroll;uniform float uDark;',
+  'uniform vec3 uPaper;uniform vec3 uPaperDark;uniform sampler2D uGrain;',
+  'const mat2 R=mat2(1.6,1.2,-1.2,1.6);',
+  GRAIN_GLSL,
+  'void main(){vec2 p=vec2(gl_FragCoord.x,uRes.y-gl_FragCoord.y)/uDpr;vec2 pp=p+uScroll;',
+  ' float paper=PAPER;vec3 col=uPaper*paper;',
+  ' if(uDark>.5){vec3 h=col/max(uPaper,vec3(.01));float a=clamp(max(max(1.-h.r,1.-h.g),1.-h.b)*1.25,0.,1.);',
+  '  col=mix(uPaperDark*(.94+.06*paper/.99),h*.9,a);}',
+  ' gl_FragColor=vec4(col,1.);}',
+].join('\n');
+
 const FS = [
   'precision highp float;',
   'uniform vec2 uRes;uniform float uDpr;uniform float uTime;uniform int uN;',
@@ -81,13 +104,15 @@ const FS = [
   'uniform vec4 uBloom[4];uniform vec3 uPaper;uniform vec3 uBead;uniform vec3 uBeadK;',
   'uniform vec4 uRib[16];uniform int uNR;uniform vec3 uRibK1;uniform vec3 uRibK2;uniform float uRibTop;',
   'uniform sampler2D uPhoto;',
-  'uniform vec2 uScroll;uniform float uDark;uniform vec3 uPaperDark;',
+  'uniform vec2 uScroll;uniform float uDark;uniform vec3 uPaperDark;uniform sampler2D uGrain;',
   'vec2 hash(vec2 p){p=vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3)));return -1.+2.*fract(sin(p)*43758.5453123);}',
   'float noise(vec2 p){vec2 i=floor(p),f=fract(p);vec2 u=f*f*(3.-2.*f);',
   ' return mix(mix(dot(hash(i),f),dot(hash(i+vec2(1,0)),f-vec2(1,0)),u.x),mix(dot(hash(i+vec2(0,1)),f-vec2(0,1)),dot(hash(i+vec2(1,1)),f-vec2(1,1)),u.x),u.y);}',
   'const mat2 R=mat2(1.6,1.2,-1.2,1.6);',
   'float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<5;i++){s+=a*noise(p);p=R*p;a*=.5;}return s;}',
   'float fbm3(vec2 p){float s=0.,a=.5;for(int i=0;i<3;i++){s+=a*noise(p);p=R*p;a*=.5;}return s;}',
+  'float fbm4(vec2 p){float s=0.,a=.5;for(int i=0;i<4;i++){s+=a*noise(p);p=R*p;a*=.5;}return s;}',
+  GRAIN_GLSL,
   'void main(){',
   ' vec2 p=vec2(gl_FragCoord.x,uRes.y-gl_FragCoord.y)/uDpr;',
   // paper grain and the timeline's currents belong to the page, so they scroll with it
@@ -106,26 +131,29 @@ const FS = [
   ' for(int i=0;i<32;i++){dn[i]=0.;mm[i]=0.;gi[i]=-1.;rt[i]=0.;',
   '  if(i>=uN)break;',
   '  vec4 D=uD[i];vec4 G=uDG[i];vec4 G2=uDG2[i];vec4 K=uDK[i];vec4 S=uDS[i];gi[i]=D.w;',
+  '  if(S.z>-.5&&S.w>.99){lastG=D.w;run=1.;rt[i]=run;continue;}',
   '  if(D.w!=lastG){lastG=D.w;run=0.;',
   '   s=(p-G.xy)/G.z;near=dot(s,s)<4.?1.:0.;',
   '   if(near>.5){T=uTime*G.w*.6+G2.x*37.;gsc=G2.w>0.?max(.03,G2.w):1.;',
-  '    vec2 q=vec2(fbm(s*1.2+vec2(0.,T*.5)),fbm(s*1.2+vec2(5.2,1.3)-vec2(T*.42,0.)));',
-  '    vec2 r=vec2(fbm(s*1.2+2.4*q+vec2(1.7,9.2)+T*.2),fbm(s*1.2+2.4*q+vec2(8.3,2.8)-T*.17));',
+  '    vec2 q=vec2(fbm4(s*1.2+vec2(0.,T*.5)),fbm4(s*1.2+vec2(5.2,1.3)-vec2(T*.42,0.)));',
+  '    vec2 r=vec2(fbm4(s*1.2+2.4*q+vec2(1.7,9.2)+T*.2),fbm4(s*1.2+2.4*q+vec2(8.3,2.8)-T*.17));',
   '    w=s+.62*r;',
-  '    w2=w+.3*vec2(fbm(w*3.4+vec2(T*.9,0.)),fbm(w*3.4+vec2(4.4,T*.8)));',
+  '    w2=w+.3*vec2(fbm3(w*3.4+vec2(T*.9,0.)),fbm3(w*3.4+vec2(4.4,T*.8)));',
   '    wet=smoothstep(-.3,.3,fbm3(w*1.3+vec2(3.1,7.7)+G2.x));}}',
   '  if(near<.5){rt[i]=run;continue;}',
-  '  float e=fbm(s*3.+K.w*11.)*.16;',
   '  vec2 dv=mix(w,w2,.35+.65*wet)-D.xy;float ca=cos(S.y),sa=sin(S.y);dv=mat2(ca,sa,-sa,ca)*dv;dv.y*=S.x;',
-  '  float d=length(dv)/(D.z*gsc)+e;',
+  // far from this drop nothing of it can show (its ragged edge reaches ~1.55): skip the noise
+  '  float d0=length(dv)/(D.z*gsc);if(d0>1.72){rt[i]=run;continue;}',
+  '  float e=fbm3(s*3.+K.w*11.)*.16;',
+  '  float d=d0+e;',
   '  float soft=1.-smoothstep(.42,1.06,d);',
   '  float hard=smoothstep(1.,.965,d)*(.55+.7*smoothstep(.55,.97,d));',
   '  float dens=mix(hard,soft,wet);',
-  '  float strand=pow(max(fbm(w2*5.5+K.w*3.),0.)*2.2,1.5);',
+  '  float strand=pow(max(fbm4(w2*5.5+K.w*3.),0.)*2.2,1.5);',
   '  float tail=smoothstep(1.5,.9,d)*strand*.6*wet;',
-  '  float pool=fbm(w2*vec2(2.2,4.4)+K.w)*.5+.5;',
+  '  float pool=fbm3(w2*vec2(2.2,4.4)+K.w)*.5+.5;',
   '  dens=dens*(.6+.62*pool)+tail*(1.-soft);',
-  '  if(dens>.001)mm[i]=smoothstep(-.28,.3,fbm(w2*2.1+vec2(K.w*5.,T*.5)));',
+  '  if(dens>.001)mm[i]=smoothstep(-.28,.3,fbm3(w2*2.1+vec2(K.w*5.,T*.5)));',
   '  dn[i]=dens;run+=dens;rt[i]=run;}',
   // pass 2, backwards: where two pigments of one US meet they braid instead of a flat overlap
   ' float cur=0.;',
@@ -153,9 +181,9 @@ const FS = [
   '   float wl=smoothstep(-.9,.9,side/wid*.7+1.7*fbm((pw+uScroll)*.035+vec2(0.,Tr*1.5)));',
   '   od+=mix(uRibK1,uRibK2,wl)*dens*str;}',
   ' }',
-  ' float gran=noise(pp*.9)*.5+noise(pp*2.3)*.3;',
+  ' float gran=gn(pp*.9)*.5+gn(pp*2.3)*.3;',
   ' od*=(1.-dil)*(1.+brim)*(.9+.32*gran);',
-  ' float paper=.975+.02*fbm3(pp*.08)+.012*noise(pp*1.7);',
+  ' float paper=PAPER;',
   ' vec3 col=uPaper*paper*exp(-od);',
   // a bead of clean water resting on the paper
   // a photo soaked into the wash: it shows where the paint is, the wet edge stays paint
@@ -186,6 +214,57 @@ const FS = [
 
 const VS = 'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}';
 
+type Box = [number, number, number, number];
+
+/**
+ * Where paint can show, in CSS px: around each wash (as far as its flow reaches), the run,
+ * the wet bead and any blooms. Overlapping boxes are merged so no pixel is painted twice.
+ */
+function paintBoxes(scene: Scene, blooms: Bloom[], width: number, height: number): Box[] {
+  const raw: Box[] = [];
+  const add = (x0: number, y0: number, x1: number, y1: number) => {
+    const b: Box = [Math.max(0, x0), Math.max(0, y0), Math.min(width, x1), Math.min(height, y1)];
+    if (b[2] > b[0] && b[3] > b[1]) raw.push(b);
+  };
+  for (const g of scene.washes) {
+    // the flow carries paint out to ~1.6 of the wash's size
+    const r = g.s * 1.75 + 6;
+    add(g.x - r, g.y - r, g.x + r, g.y + r);
+  }
+  const rib = scene.ribbon;
+  if (rib && rib.pts.length > 1) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, wd = 0;
+    for (const [x, y, w] of rib.pts.slice(0, MAX_RIBBON)) {
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); wd = Math.max(wd, w);
+    }
+    const m = wd * 1.6 + 40;
+    add(x0 - m, y0 - m, x1 + m, y1 + m);
+  }
+  const b = scene.bead;
+  if (b) add(b.x - b.r * 1.4, b.y - b.r * 1.4, b.x + b.r * 1.4, b.y + b.r * 1.4);
+  for (const bl of blooms.slice(-4)) {
+    const r = bl.r * 1.9 + 8;
+    add(bl.x - r, bl.y - r, bl.x + r, bl.y + r);
+  }
+  // merge until nothing overlaps
+  const boxes = raw;
+  for (let merged = true; merged; ) {
+    merged = false;
+    outer: for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i], c = boxes[j];
+        if (a[0] <= c[2] && c[0] <= a[2] && a[1] <= c[3] && c[1] <= a[3]) {
+          boxes[i] = [Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[2], c[2]), Math.max(a[3], c[3])];
+          boxes.splice(j, 1);
+          merged = true;
+          break outer;
+        }
+      }
+    }
+  }
+  return boxes;
+}
+
 function rgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16);
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
@@ -198,6 +277,12 @@ function absorb(hex: string, a: number): [number, number, number] {
 export class Painter {
   private gl: WebGLRenderingContext;
   private u: Record<string, WebGLUniformLocation | null> = {};
+  private up: Record<string, WebGLUniformLocation | null> = {};
+  private paintProgram!: WebGLProgram;
+  private paperProgram!: WebGLProgram;
+  private parallel: { COMPLETION_STATUS_KHR: number } | null = null;
+  private shaders: WebGLShader[] = [];
+  private isSetUp = false;
   private aD = new Float32Array(MAX_DROPS * 4);
   private aK = new Float32Array(MAX_DROPS * 4);
   private aS = new Float32Array(MAX_DROPS * 4);
@@ -216,8 +301,12 @@ export class Painter {
 
   /** wait for the GPU to finish this frame (only for measuring) */
   finish() {
-    this.gl.finish();
+    // reading one pixel back forces the frame to actually be drawn before we stop the clock
+    this.gl.readPixels(0, 0, 1, 1, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.probe);
   }
+  private probe = new Uint8Array(4);
+  /** CSS px² the paint shader covered last frame (for measuring) */
+  paintedArea = 0;
 
   static create(canvas: HTMLCanvasElement): Painter | null {
     const gl = canvas.getContext('webgl', { premultipliedAlpha: false, antialias: false, alpha: false });
@@ -231,31 +320,93 @@ export class Painter {
 
   private constructor(gl: WebGLRenderingContext) {
     this.gl = gl;
-    const compile = (type: number, src: string) => {
-      const s = gl.createShader(type)!;
-      gl.shaderSource(s, src);
-      gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) ?? 'shader');
-      return s;
+    // Compiling the paint takes a moment on a phone. Where the browser can do it in the
+    // background, it does, and the paper waits (ready()); otherwise it happens right here,
+    // before anything moves, rather than when the first drop lands.
+    this.parallel = gl.getExtension('KHR_parallel_shader_compile');
+    const shader = (type: number, src: string) => {
+      const sh = gl.createShader(type)!;
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      this.shaders.push(sh);
+      return sh;
     };
-    const pr = gl.createProgram()!;
-    gl.attachShader(pr, compile(gl.VERTEX_SHADER, VS));
-    gl.attachShader(pr, compile(gl.FRAGMENT_SHADER, FS));
-    gl.linkProgram(pr);
-    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error('link');
-    gl.useProgram(pr);
+    const link = (fs: string) => {
+      const pr = gl.createProgram()!;
+      gl.attachShader(pr, shader(gl.VERTEX_SHADER, VS));
+      gl.attachShader(pr, shader(gl.FRAGMENT_SHADER, fs));
+      gl.linkProgram(pr);
+      return pr;
+    };
+    this.paintProgram = link(FS);
+    this.paperProgram = link(FS_PAPER);
+    if (!this.parallel) this.setUp();
+  }
+
+  /** True once the paint is compiled and set up; false while the browser is still compiling. */
+  ready(): boolean {
+    if (this.isSetUp) return true;
+    const done = this.parallel?.COMPLETION_STATUS_KHR ?? 0x91b1;
+    const { gl } = this;
+    if (!gl.getProgramParameter(this.paintProgram, done) || !gl.getProgramParameter(this.paperProgram, done)) return false;
+    this.setUp();
+    return true;
+  }
+
+  private setUp() {
+    const { gl } = this;
+    for (const sh of this.shaders) {
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh) ?? 'shader');
+    }
+    for (const pr of [this.paintProgram, this.paperProgram]) {
+      if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error('link');
+    }
+    const pr = this.paintProgram;
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    const loc = gl.getAttribLocation(pr, 'a');
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    for (const prog of [pr, this.paperProgram]) {
+      const loc = gl.getAttribLocation(prog, 'a');
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    }
+    for (const n of ['uRes', 'uDpr', 'uScroll', 'uDark', 'uPaper', 'uPaperDark', 'uGrain']) {
+      this.up[n] = gl.getUniformLocation(this.paperProgram, n);
+    }
+
+    // the grain: random values a linear filter turns into soft noise; wraps, so it tiles the page
+    const grain = new Uint8Array(GRAIN_SIDE * GRAIN_SIDE);
+    for (let i = 0; i < grain.length; i++) grain[i] = (Math.random() * 256) | 0;
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, GRAIN_SIDE, GRAIN_SIDE, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, grain);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.useProgram(this.paperProgram);
+    gl.uniform1i(this.up.uGrain, 1);
+    gl.useProgram(pr);
     for (const n of ['uRes', 'uDpr', 'uTime', 'uN', 'uD', 'uDK', 'uDS', 'uDG', 'uDG2', 'uBloom', 'uPaper', 'uBead',
       'uBeadK', 'uRib', 'uNR', 'uRibK1', 'uRibK2', 'uRibTop', 'uPhoto', 'uScroll', 'uDark',
-      'uPaperDark']) {
+      'uPaperDark', 'uGrain']) {
       this.u[n] = gl.getUniformLocation(pr, n);
     }
     gl.uniform1i(this.u.uPhoto, 0);
+    gl.uniform1i(this.u.uGrain, 1);
+
+    // draw one pixel with each, so the driver finishes its work now and not on the first drop
+    gl.enable(gl.SCISSOR_TEST);
+    gl.scissor(0, 0, 1, 1);
+    gl.uniform1i(this.u.uN, 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.useProgram(this.paperProgram);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.disable(gl.SCISSOR_TEST);
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, this.probe);
+    this.isSetUp = true;
   }
 
   render(o: {
@@ -279,6 +430,25 @@ export class Painter {
       canvas.height = h;
     }
     gl.viewport(0, 0, w, h);
+    const dpr = w / o.width;
+
+    // bare paper everywhere (cheap)
+    const { up } = this;
+    gl.disable(gl.SCISSOR_TEST);
+    gl.useProgram(this.paperProgram);
+    gl.uniform2f(up.uRes, w, h);
+    gl.uniform1f(up.uDpr, dpr);
+    gl.uniform2f(up.uScroll, 0, o.scrollY);
+    gl.uniform3fv(up.uPaper, rgb(o.paper));
+    gl.uniform3fv(up.uPaperDark, rgb(o.paperDark));
+    gl.uniform1f(up.uDark, o.dark ? 1 : 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    // then the paint, only inside the boxes where something lies
+    const boxes = paintBoxes(o.scene, o.blooms, o.width, o.height);
+    this.paintedArea = boxes.reduce((a, b) => a + (b[2] - b[0]) * (b[3] - b[1]), 0);
+    if (!boxes.length) return;
+    gl.useProgram(this.paintProgram);
     gl.uniform2f(u.uRes, w, h);
     gl.uniform1f(u.uDpr, w / o.width);
     gl.uniform1f(u.uTime, o.time);
@@ -330,7 +500,12 @@ export class Painter {
     o.blooms.slice(-4).forEach((bl, i) => this.aB.set([bl.x, bl.y, bl.start, bl.r], i * 4));
     gl.uniform4fv(u.uBloom, this.aB);
 
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.enable(gl.SCISSOR_TEST);
+    for (const [x0, y0, x1, y1] of boxes) {
+      gl.scissor(Math.floor(x0 * dpr), Math.floor(h - y1 * dpr), Math.ceil((x1 - x0) * dpr), Math.ceil((y1 - y0) * dpr));
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    gl.disable(gl.SCISSOR_TEST);
   }
 
   /**

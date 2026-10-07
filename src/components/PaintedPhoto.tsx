@@ -12,7 +12,7 @@ import type { Drop } from '../lib/watercolour';
 // the water the photo sits in: fills the square, adds no colour
 const FRAME_WATER: Drop[] = [{ x: 0, y: 0, r: 1.6, color: '#FFFFFF', alpha: 0.01 }];
 
-/** Paint along the four edges of the square: one long stroke per side, a dab at each corner. */
+/** Paint along the four edges of the square: one long stroke per side, overlapping at the corners. */
 export function edgeDrops(colors: string[]): Drop[] {
   const cs = colors.length ? colors : ['#9C9488'];
   const c = (i: number) => cs[i % cs.length];
@@ -22,10 +22,6 @@ export function edgeDrops(colors: string[]): Drop[] {
     { x: 1.08, y: 0.03, r: 1.14, aspect: 3.5, angle: Math.PI / 2 - 0.04, color: c(1), alpha: 0.84 },
     { x: -0.03, y: 1.08, r: 1.18, aspect: 3.3, angle: -0.06, color: c(2), alpha: 0.84 },
     { x: -1.08, y: -0.02, r: 1.14, aspect: 3.5, angle: Math.PI / 2 + 0.05, color: c(3), alpha: 0.84 },
-    { x: -1.04, y: -1.04, r: 0.34, color: c(4), alpha: 0.8 },
-    { x: 1.04, y: -1.03, r: 0.32, color: c(5), alpha: 0.8 },
-    { x: 1.03, y: 1.04, r: 0.35, color: c(6), alpha: 0.8 },
-    { x: -1.03, y: 1.05, r: 0.33, color: c(7), alpha: 0.8 },
   ];
 }
 

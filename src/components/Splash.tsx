@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useCanPaint, useStill } from './Paper';
+import { useCanPaint, usePaperReady, useStill } from './Paper';
 import Wash from './Wash';
 import { t } from '../strings';
 
@@ -90,31 +90,38 @@ export default function Splash({ onDone }: { onDone: () => void }) {
     onDone();
   };
 
+  // Start once the paper is ready to paint (its paint compiled), or after 1.5 s regardless,
+  // so the first drop never spreads while the phone is busy getting ready.
+  const paperReady = usePaperReady();
+  const [waited, setWaited] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setWaited(true), 1500);
+    return () => window.clearTimeout(id);
+  }, []);
+  const go = paperReady || waited;
+
   useEffect(() => {
     // asked for less motion: no opening at all
     if (still) {
       finish.current();
       return;
     }
-    // Start once the paper has drawn two frames: the first launch compiles the paint,
-    // and the first drop shouldn't spread while nobody can see it yet.
+    if (!go) return;
     const timers: number[] = [];
     let raf = requestAnimationFrame(() => {
-      raf = requestAnimationFrame(() => {
-        setFirst(true);
-        timers.push(
-          window.setTimeout(() => setSecond(true), SECOND_LANDS),
-          window.setTimeout(() => setWord(true), WORD_SOAKS),
-          window.setTimeout(() => setLeaving(true), LEAVING),
-          window.setTimeout(() => finish.current(), DONE),
-        );
-      });
+      setFirst(true);
+      timers.push(
+        window.setTimeout(() => setSecond(true), SECOND_LANDS),
+        window.setTimeout(() => setWord(true), WORD_SOAKS),
+        window.setTimeout(() => setLeaving(true), LEAVING),
+        window.setTimeout(() => finish.current(), DONE),
+      );
     });
     return () => {
       cancelAnimationFrame(raf);
       timers.forEach((id) => window.clearTimeout(id));
     };
-  }, [still]);
+  }, [still, go]);
 
   // the paper closes over the paint as the app comes up
   useEffect(() => {

@@ -28,6 +28,8 @@ interface PaperApi {
 const PaperContext = createContext<PaperApi>({ register: () => () => undefined, bloom: () => undefined });
 /** false when there is no WebGL: elements then show plain fallbacks (e.g. an ordinary photo). */
 const CanPaint = createContext(true);
+/** true once the paper can actually paint (or never will): openings wait for it */
+const PaperReady = createContext(false);
 
 const PAPER = '#F7F3EB';
 const PAPER_DARK = '#1F1C19';
@@ -38,20 +40,33 @@ export function PaperProvider({ children }: { children: ReactNode }) {
   const blooms = useRef<Bloom[]>([]);
   const clock = useRef(0);
   const [canPaint, setCanPaint] = useState(true);
+  const [ready, setReady] = useState(false);
+  // Paint mostly moves slowly; it only needs smooth frames while something is happening
+  // (a drop spreading, a bloom, a page arriving). Until then it is redrawn a few times a second.
+  const busyUntil = useRef(0);
+  const wake = (ms: number) => {
+    busyUntil.current = Math.max(busyUntil.current, performance.now() + ms);
+  };
   const api = useRef<PaperApi>({
     register(entry) {
       entries.current.add(entry);
-      return () => entries.current.delete(entry);
+      wake(2000);
+      return () => {
+        entries.current.delete(entry);
+        wake(600);
+      };
     },
     bloom(x, y, r = 40) {
       if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       blooms.current = [...blooms.current.slice(-3), { x, y: y + window.scrollY, start: clock.current, r }];
+      wake(3000);
     },
   });
 
   useEffect(() => {
     const el = canvas.current;
     if (!el) return;
+    el.style.visibility = 'hidden';
     const tc = performance.now();
     const painter = Painter.create(el);
     (window as unknown as { __paperCompileMs: number }).__paperCompileMs = performance.now() - tc;
@@ -75,6 +90,7 @@ export function PaperProvider({ children }: { children: ReactNode }) {
     // below, and is moved and repainted at most ~30 times a second, or sooner when a fast
     // scroll gets close to the edge of what was painted.
     let paintedAt = -1;
+    let isReady = false;
     // measuring (localStorage us-perf=1): frames painted, time spent, what was on screen
     const perf = (() => {
       try {
@@ -82,7 +98,7 @@ export function PaperProvider({ children }: { children: ReactNode }) {
       } catch {
         return null;
       }
-      const stats = { frames: 0, ms: 0, drops: 0, washes: 0 };
+      const stats = { frames: 0, ms: 0, drops: 0, washes: 0, area: 0 };
       (window as unknown as { __paper: typeof stats }).__paper = stats;
       return stats;
     })();
@@ -94,12 +110,30 @@ export function PaperProvider({ children }: { children: ReactNode }) {
         last = 0;
         return;
       }
+      // the paint may still be compiling in the background: the plain paper shows meanwhile
+      if (!isReady) {
+        try {
+          if (!painter.ready()) return;
+        } catch {
+          cancelAnimationFrame(raf);
+          el.style.display = 'none';
+          setCanPaint(false);
+          return;
+        }
+        isReady = true;
+        wake(2000);
+      }
       const vh = window.innerHeight;
       const vw = window.innerWidth;
       const sy = window.scrollY;
       const over = Math.round(vh * 0.35);
-      if (paintedAt >= 0 && ts - paintedAt < 31 && Math.abs(sy - paintedScroll) < over * 0.5) return;
-      if (last) {
+      const busy = performance.now() < busyUntil.current;
+      const interval = busy ? 31 : 83;
+      if (paintedAt >= 0 && ts - paintedAt < interval && Math.abs(sy - paintedScroll) < over * 0.5) return;
+      // scrolling counts as something happening
+      if (Math.abs(sy - paintedScroll) > 1) wake(400);
+      // only judge speed between smooth frames
+      if (last && busy && ts - last < 80) {
         const dt = ts - last;
         if (dt > 48) slow++;
         else if (dt < 36) fast++;
@@ -158,12 +192,18 @@ export function PaperProvider({ children }: { children: ReactNode }) {
         paperDark: PAPER_DARK,
         dark: dark.matches,
       });
+      // first real frame: show the canvas (until now it would have been blank, i.e. black)
+      if (el.style.visibility === 'hidden') {
+        el.style.visibility = '';
+        setReady(true);
+      }
       if (perf) {
         painter.finish();
         perf.frames++;
         perf.ms += performance.now() - t1;
         perf.drops = drops;
         perf.washes = scene.washes.length;
+        perf.area = Math.round(painter.paintedArea);
       }
     };
     raf = requestAnimationFrame(frame);
@@ -176,8 +216,10 @@ export function PaperProvider({ children }: { children: ReactNode }) {
   return (
     <PaperContext.Provider value={api.current}>
       <CanPaint.Provider value={canPaint}>
+        <PaperReady.Provider value={ready || !canPaint}>
         <canvas ref={canvas} className="paper-canvas" aria-hidden="true" />
         {children}
+        </PaperReady.Provider>
       </CanPaint.Provider>
     </PaperContext.Provider>
   );
@@ -195,6 +237,10 @@ export function usePaint(el: RefObject<Element | null>, paint: Painting) {
 
 export function useBloom() {
   return useContext(PaperContext).bloom;
+}
+
+export function usePaperReady() {
+  return useContext(PaperReady);
 }
 
 export function useCanPaint() {
