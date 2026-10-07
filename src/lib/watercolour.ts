@@ -159,11 +159,15 @@ const FS = [
   ' vec3 col=uPaper*paper*exp(-od);',
   // a bead of clean water resting on the paper
   // a photo soaked into the wash: it shows where the paint is, the wet edge stays paint
+  // (k.x >= 1: a photo set into paint, left exactly as it is; where the pigment lies thick the
+  // paper and paint show instead, so the paint's own edge is the photo's edge)
+  ' float phm=0.;vec3 pcol=vec3(0.);',
   ' if(ps>-.5){vec2 uv=(p-(pg.xy-pg.z*1.02))/(pg.z*2.04);',
   '  if(uv.x>0.&&uv.y>0.&&uv.x<1.&&uv.y<1.){',
   '   vec2 cell=vec2(mod(ps,4.),floor(ps/4.));vec3 ph=texture2D(uPhoto,(cell+clamp(uv,.003,.997))/4.).rgb;',
-  '   float m=smoothstep(.22,.75,pm);vec3 odp=-log(max(ph,vec3(.04)))*pkx;',
-  '   col=uPaper*paper*exp(-mix(od,odp+od*pky,m));}}',
+  '   float m=smoothstep(.22,.75,pm);',
+  '   if(pkx>.99){float th=max(od.r,max(od.g,od.b));phm=m*(1.-smoothstep(.06,.42,th));pcol=ph;col=mix(col,ph,phm);}',
+  '   else{vec3 odp=-log(max(ph,vec3(.04)))*pkx;col=uPaper*paper*exp(-mix(od,odp+od*pky,m));}}}',
   ' if(uBead.z>0.){vec2 bd=p-uBead.xy;float br=uBead.z;vec2 n=normalize(bd+1e-4);',
   '  float jag=1.+.22*fbm3(n*1.3+vec2(3.,1.))+.02*sin(uTime*.9+atan(bd.y,bd.x)*2.);',
   '  float d=length(bd*vec2(1.,1.18))/(br*jag);',
@@ -176,7 +180,7 @@ const FS = [
   '  col=mix(col,bc,inside);}',
   // dark paper: lay the same pigment down as if on black paper, keeping each colour's hue
   ' if(uDark>.5){vec3 h=col/max(uPaper,vec3(.01));float a=clamp(max(max(1.-h.r,1.-h.g),1.-h.b)*1.25,0.,1.);',
-  '  col=mix(uPaperDark*(.94+.06*paper/.99),h*.9,a);}',
+  '  col=mix(uPaperDark*(.94+.06*paper/.99),h*.9,a);col=mix(col,pcol,phm);}',
   ' gl_FragColor=vec4(col,1.);}'
 ].join('\n');
 

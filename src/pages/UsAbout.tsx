@@ -11,6 +11,7 @@ import type { Invitation, Member, Proposal, ProposalKind, UsPreset, UsState } fr
 import { t } from '../strings';
 import BackLink from '../components/BackLink';
 import Wash from '../components/Wash';
+import PaintedPhoto from '../components/PaintedPhoto';
 import WetDrop from '../components/WetDrop';
 import Sheet from '../components/Sheet';
 import { PencilMore } from '../components/Pencil';
@@ -65,9 +66,10 @@ function Portrait({
   const colorAt = (i: number) => colors.get(members[i].user_id) ?? '#9C9488';
 
   // one wash the size of the portrait: positions in units of its half-height
-  const drops: Drop[] = members.map((_, i) => {
+  const drops: Drop[] = members.flatMap((m, i) => {
+    if (m.profiles?.avatar_path) return [];
     const { dx, dy } = at(i);
-    return { x: (dx * ring) / half, y: (dy * ring) / half, r: (size * 0.31) / half, color: colorAt(i), alpha: 0.85 };
+    return [{ x: (dx * ring) / half, y: (dy * ring) / half, r: (size * 0.31) / half, color: colorAt(i), alpha: 0.85 }];
   });
   if (n >= 2) {
     members.slice(0, 12).forEach((_, i) => {
@@ -96,11 +98,12 @@ function Portrait({
         return (
           <div key={m.user_id}>
             {url && (
-              <img
-                className="portrait-img"
-                src={url}
-                alt=""
-                style={{ width: size * 0.56, height: size * 0.56, left: `calc(50% + ${dx * ring - size * 0.28}px)`, top: half + dy * ring - size * 0.28 }}
+              <PaintedPhoto
+                className="portrait-photo"
+                url={url}
+                colors={[colorAt(i)]}
+                seed={i * 2.3 + 1}
+                style={{ width: size * 1.2, height: size * 1.2, left: `calc(50% + ${dx * ring - size * 0.6}px)`, top: half + dy * ring - size * 0.6 }}
               />
             )}
             {named && (

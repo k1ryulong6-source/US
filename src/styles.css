@@ -1784,27 +1784,63 @@ a.sheet-row {
   padding: 8px 0;
 }
 
-/* a photo left as it is, with wet paint around its edge */
+/* a photo left exactly as it is, wet paint laid over its edges (PaintedPhoto.tsx) */
 .painted-photo {
   position: relative;
   display: block;
 }
-.painted-photo-wash {
+.painted-photo-layer {
   position: absolute;
   inset: 0;
 }
-.painted-photo-img,
-.portrait-img {
+/* no WebGL, or the photo can't be painted: just the photo, square */
+.painted-photo-plain,
+.painted-photo .wash-photo-plain {
   position: absolute;
+  left: 19%;
+  top: 19%;
+  width: 62%;
+  height: 62%;
   object-fit: cover;
-  border-radius: 48% 52% 46% 54% / 52% 47% 53% 48%;
-  /* the edge softens a touch into the wet paper; the picture itself is untouched */
-  -webkit-mask-image: radial-gradient(closest-side, #000 88%, transparent 100%);
-  mask-image: radial-gradient(closest-side, #000 88%, transparent 100%);
+  border-radius: 0;
 }
-.painted-photo-img {
-  left: 21%;
-  top: 21%;
-  width: 58%;
-  height: 58%;
+.painted-photo.portrait-photo {
+  position: absolute;
+}
+
+/* ------------------------------------------------------------ moving between pages */
+
+/* the words soak in (no fill-mode afterwards: a lingering transform would trap fixed sheets) */
+.page-enter {
+  animation: page-in 0.42s cubic-bezier(0.2, 0.7, 0.3, 1) backwards;
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(3px);
+  }
+}
+/* the paint comes up from under a sheet of paper (above the paint, below the words) */
+.paint-veil {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--paper);
+  pointer-events: none;
+  animation: veil-out 0.6s ease-out forwards;
+}
+@keyframes veil-out {
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .paint-veil {
+    animation: none;
+  }
+  .paint-veil {
+    opacity: 0;
+  }
 }

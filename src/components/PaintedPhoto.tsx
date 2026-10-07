@@ -1,20 +1,32 @@
 import type { CSSProperties } from 'react';
 import Wash from './Wash';
+import { useCanPaint } from './Paper';
 import type { Drop } from '../lib/watercolour';
 
 /**
- * A photo left as it is, set into wet paint: the picture sits in the middle, untouched,
- * and the colour (yours, or everyone's) runs around its edge.
+ * A photo left exactly as it is, with wet paint laid over its edges. The picture is square;
+ * the paint runs along all four sides and over them, so what shows is shaped by the paint's
+ * own edge (crisp, irregular, a darker rim where it dried), never by a mask or a blur.
  */
-export function ringDrops(colors: string[]): Drop[] {
+
+// the water the photo sits in: fills the square, adds no colour
+const FRAME_WATER: Drop[] = [{ x: 0, y: 0, r: 1.6, color: '#FFFFFF', alpha: 0.01 }];
+
+/** Paint along the four edges of the square: one long stroke per side, a dab at each corner. */
+export function edgeDrops(colors: string[]): Drop[] {
   const cs = colors.length ? colors : ['#9C9488'];
-  const n = Math.max(6, cs.length);
-  const drops: Drop[] = [];
-  for (let i = 0; i < n; i++) {
-    const a = (i / n) * Math.PI * 2 + 0.4;
-    drops.push({ x: Math.cos(a) * 0.5, y: Math.sin(a) * 0.5, r: 0.42, color: cs[i % cs.length], alpha: 0.82 });
-  }
-  return drops;
+  const c = (i: number) => cs[i % cs.length];
+  // each side a little crooked, so it reads as brushed, not ruled
+  return [
+    { x: 0.04, y: -1.08, r: 1.16, aspect: 3.4, angle: 0.05, color: c(0), alpha: 0.84 },
+    { x: 1.08, y: 0.03, r: 1.14, aspect: 3.5, angle: Math.PI / 2 - 0.04, color: c(1), alpha: 0.84 },
+    { x: -0.03, y: 1.08, r: 1.18, aspect: 3.3, angle: -0.06, color: c(2), alpha: 0.84 },
+    { x: -1.08, y: -0.02, r: 1.14, aspect: 3.5, angle: Math.PI / 2 + 0.05, color: c(3), alpha: 0.84 },
+    { x: -1.04, y: -1.04, r: 0.34, color: c(4), alpha: 0.8 },
+    { x: 1.04, y: -1.03, r: 0.32, color: c(5), alpha: 0.8 },
+    { x: 1.03, y: 1.04, r: 0.35, color: c(6), alpha: 0.8 },
+    { x: -1.03, y: 1.05, r: 0.33, color: c(7), alpha: 0.8 },
+  ];
 }
 
 export default function PaintedPhoto({
@@ -30,10 +42,18 @@ export default function PaintedPhoto({
   className?: string;
   style?: CSSProperties;
 }) {
+  const canPaint = useCanPaint();
   return (
     <span className={className ? `painted-photo ${className}` : 'painted-photo'} style={style}>
-      <Wash className="painted-photo-wash" drops={ringDrops(colors)} seed={seed} flow={0.05} />
-      <img className="painted-photo-img" src={url} alt="" draggable={false} />
+      {canPaint ? (
+        <>
+          <Wash className="painted-photo-layer" drops={FRAME_WATER} photo={url} photoK={[1, 1]} scale={0.6} seed={seed} flow={0.02} />
+          <Wash className="painted-photo-layer" drops={edgeDrops(colors)} scale={0.6} seed={seed + 1.7} flow={0.04} />
+        </>
+      ) : (
+        // no WebGL: the photo, square and plain
+        <img className="painted-photo-plain" src={url} alt="" draggable={false} />
+      )}
     </span>
   );
 }
