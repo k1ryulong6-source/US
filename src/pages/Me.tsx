@@ -13,6 +13,8 @@ import Palette from '../components/Palette';
 import { CLEAR_WATER } from '../lib/washes';
 import Wash from '../components/Wash';
 import PhotoSheet from '../components/PhotoSheet';
+import Sheet from '../components/Sheet';
+import { startMove } from '../lib/transfer';
 import { PencilCamera } from '../components/Pencil';
 
 export default function Me() {
@@ -24,6 +26,9 @@ export default function Me() {
   const [bindStep, setBindStep] = useState<'email' | 'code' | 'done'>('email');
   const [error, setError] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
+  const [moveSheet, setMoveSheet] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const [moveFailed, setMoveFailed] = useState(false);
   const avatar = useSignedUrls(profile?.avatar_path ? [profile.avatar_path] : []);
 
   useEffect(() => {
@@ -184,11 +189,41 @@ export default function Me() {
       <Link to="/me/export" className="link">
         {t.me.export}
       </Link>
+      <button type="button" className="link" onClick={() => setMoveSheet(true)}>
+        {t.move.title}
+      </button>
 
       <button className="link quiet" onClick={signOut}>
         {t.me.signOut}
       </button>
       </div>
+
+      {moveSheet && (
+        <Sheet title={t.move.title} onClose={() => setMoveSheet(false)}>
+          <div className="sheet-body">
+            <p className="small">{t.move.explain}</p>
+            <p className="quiet small">{t.move.explain2}</p>
+            <button
+              type="button"
+              className="primary self-start"
+              disabled={moving}
+              onClick={async () => {
+                setMoving(true);
+                setMoveFailed(false);
+                try {
+                  await startMove();
+                } catch {
+                  setMoving(false);
+                  setMoveFailed(true);
+                }
+              }}
+            >
+              {moving ? t.move.starting : t.move.start}
+            </button>
+            <ErrorNote show={moveFailed} />
+          </div>
+        </Sheet>
+      )}
 
       {sheet && (
         <PhotoSheet

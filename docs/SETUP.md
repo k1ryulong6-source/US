@@ -9,7 +9,7 @@ V1 的全部功能都已完成：登录、US、邀请、提议、回忆（照片
 适合先在自己手机上试。`*.pages.dev` 和 `*.supabase.co` 在大陆经常打不开，所以这种方式只在国外、或者开着代理时可用；确定要给大陆的朋友用，再按后面的完整步骤买域名。
 
 1. **Supabase**：新建项目（Region 选 Tokyo）。
-   - SQL Editor → New query → 粘贴全部 8 个迁移文件的内容（按文件名顺序；或运行 `scripts/db/combine.sh > all.sql` 得到一个合并好的文件）→ Run。只在新项目里运行一次。
+   - SQL Editor → New query → 粘贴全部 11 个迁移文件的内容（按文件名顺序；或运行 `scripts/db/combine.sh > all.sql` 得到一个合并好的文件）→ Run。只在新项目里运行一次。
    - Authentication → Sign In / Providers：Email 开启、关闭 "Confirm email"、OTP 长度 6；打开 **Allow anonymous sign-ins**。
    - Authentication → Emails → Templates：Magic Link、Confirm signup 换成 `supabase/templates/` 里对应的模板（邮件里才会有 6 位验证码）。
    - 不需要 SMTP：自带的发信服务能发给**你自己**（项目成员）的邮箱；朋友用邀请链接以访客身份进来，不需要邮箱。
@@ -19,6 +19,7 @@ V1 的全部功能都已完成：登录、US、邀请、提议、回忆（照片
    - 部署完会得到 `https://<名字>.pages.dev`。
 3. 回到 Supabase → Authentication → URL Configuration，Site URL 填这个 `pages.dev` 地址。
 4. 手机打开这个地址：用自己的邮箱登录 → 新建 US → 在 About 里生成邀请链接发给朋友。
+5. 防止免费版暂停（推荐）：Supabase 免费项目一周没人访问会自动暂停。仓库里有一个每天访问一次数据库的定时任务（`.github/workflows/keep-alive.yml`）。在 GitHub → 仓库 Settings → Secrets and variables → Actions 里添加两个 secret：`SUPABASE_URL`（Project URL）和 `SUPABASE_ANON_KEY`（anon key，**不是** service_role key）。注意：定时任务只在默认分支（main）上运行，代码合并到 main 之后才会生效。
 
 ---
 
@@ -31,7 +32,7 @@ V1 的全部功能都已完成：登录、US、邀请、提议、回忆（照片
 ## 1. 创建 Supabase 项目
 
 1. 新建项目，Region 选 **Northeast Asia (Tokyo)**。
-2. 建表：把 `supabase/migrations/` 里的 8 个 SQL 文件**按文件名顺序**（或 `scripts/db/combine.sh` 合并出的一个文件）粘贴到 **SQL Editor** 执行。这一步会自动建好私有的 `media` 存储桶和题库。
+2. 建表：把 `supabase/migrations/` 里的 11 个 SQL 文件**按文件名顺序**（或 `scripts/db/combine.sh` 合并出的一个文件）粘贴到 **SQL Editor** 执行。这一步会自动建好私有的 `media` 存储桶和题库。
    也可以用 CLI：
    ```bash
    npx supabase login
@@ -124,11 +125,11 @@ V1 的全部功能都已完成：登录、US、邀请、提议、回忆（照片
 18. B 离开这个 US，选"带走我的内容"。A 那边：B 写的回忆和版本都消失了；如果 A 在 B 的某段回忆下写过版本，这段回忆会以空壳的形式保留，A 写的不受影响。
 19. 安装：iPhone 在 Safari 里点"分享 → 添加到主屏幕"；安卓 Chrome 菜单里选"安装应用"。之后可以在"我"里打开每周提醒。
 
-iOS 小提示：主屏幕上的 App 和 Safari 是**两个独立的存储**。访客最好先在 Safari 里绑定邮箱，再到主屏幕 App 里用邮箱登录。
+iOS 小提示：主屏幕上的 App 和 Safari 是**两个独立的存储**。在 Safari 里以访客身份进来的人，到 Me →「换到另一台设备」生成一个换设备码，再在主屏幕 App 的登录页点「我有换设备码」输入，就能接着用同一个身份（不需要邮箱）。换手机也是这样。
 
 ## 6. 运行测试
 
-数据库权限测试共 225 条：
+数据库权限测试共 265 条：
 
 ```bash
 npx supabase start

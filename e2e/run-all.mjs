@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { resetDb } from './lib.mjs';
 
-const flows = ['flow', 'memories', 'intentions', 'perspectives', 'phase_e', 'export_photos', 'noemail'];
+const flows = ['flow', 'memories', 'intentions', 'perspectives', 'phase_e', 'export_photos', 'noemail', 'together'];
 if (process.env.GL === '1') flows.push('design');
 
 let failed = 0;

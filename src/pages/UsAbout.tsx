@@ -19,6 +19,8 @@ import ErrorNote from '../components/ErrorNote';
 import PresetPicker from '../components/PresetPicker';
 
 const STATES: UsState[] = ['active', 'quiet', 'closed'];
+/** A proposal nobody declines takes effect after 14 days (see settle_proposals). */
+const quietUntil = (createdAt: string) => new Date(new Date(createdAt).getTime() + 14 * 864e5).toISOString();
 type SheetKind = ProposalKind | 'invite' | 'more';
 
 function describeProposal(p: Proposal): string {
@@ -355,6 +357,7 @@ export default function UsAbout() {
               <WetDrop color={colors.get(p.proposed_by ?? '') ?? '#9C9488'} size={22} />
               <span className="small quiet">{t.about.proposedBy(nameOf(p.proposed_by))}</span>
               <p>{describeProposal(p)}</p>
+              <span className="small quiet">{t.about.quietUntil(formatDate(quietUntil(p.created_at)))}</span>
               {answered.has(p.id) ? (
                 <div className="row">
                   <span className="quiet small">{t.about.waitingOthers}</span>

@@ -1,10 +1,10 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { formatMemoryDate } from '../lib/format';
 import { pool } from '../lib/washes';
 import type { HistoryEntry, Memory, TimelineIntention } from '../lib/types';
 import { t } from '../strings';
-import { usePaint } from './Paper';
+import { useBloom, usePaint, useStill } from './Paper';
 import Wash from './Wash';
 import { PencilRule } from './Pencil';
 
@@ -22,7 +22,11 @@ interface Props {
   together: string[];
   /** the wet drop at the head of the run (today); the paint starts there */
   head: React.RefObject<HTMLElement | null>;
+  /** memories others added (or wrote a version of) since my last visit: still wet, for me only */
+  fresh?: Set<string>;
 }
+
+const FRESH = { flow: 0.12, strength: 1.05 };
 
 const NOW = new Date();
 const THIS_YEAR = String(NOW.getFullYear());
@@ -51,7 +55,7 @@ function shortDate(iso: string, precision: 'day' | 'month' | 'year') {
  * side by side, bleeding into each other. Each memory is a small pool where the paint gathered.
  * Newest at the top (still wet), older further down (drier, paler). Years are pencilled in.
  */
-export default function Timeline({ memories, intentions, history, colorOf, together, head }: Props) {
+export default function Timeline({ memories, intentions, history, colorOf, together, head, fresh }: Props) {
   const planMemories = new Set(intentions.map((i) => i.memory_id).filter(Boolean));
   const entries: Entry[] = [
     ...memories.map((m) => ({
@@ -103,6 +107,24 @@ export default function Timeline({ memories, intentions, history, colorOf, toget
     return { ribbon: { c1: together[0], c2: together[1] ?? together[0], pts, top } };
   });
 
+  // a new pool blooms the first time it comes into view, as if the drop just landed
+  const bloom = useBloom();
+  const still = useStill();
+  const freshKey = fresh ? [...fresh].sort().join(',') : '';
+  useEffect(() => {
+    if (!freshKey || still || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver((seen) => {
+      for (const e of seen) {
+        if (!e.isIntersecting) continue;
+        const r = e.target.getBoundingClientRect();
+        bloom(r.left + r.width / 2, r.top + r.height / 2, 46);
+        io.unobserve(e.target);
+      }
+    });
+    box.current?.querySelectorAll('[data-fresh] .run-anchor').forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [freshKey, still, bloom, memories.length]);
+
   let lastYear = THIS_YEAR;
   return (
     <div className="run" ref={box}>
@@ -124,12 +146,16 @@ export default function Timeline({ memories, intentions, history, colorOf, toget
               </div>
             )}
             {e.kind === 'memory' && (
-              <Link to={`/us/${e.memory.us_id}/m/${e.memory.id}`} className={`run-row ${side}`}>
+              <Link
+                to={`/us/${e.memory.us_id}/m/${e.memory.id}`}
+                className={fresh?.has(e.memory.id) ? `run-row ${side} fresh` : `run-row ${side}`}
+                data-fresh={fresh?.has(e.memory.id) || undefined}
+              >
                 <Wash
                   className="run-node pool"
                   drops={pool(e.fromPlan ? together : [colorOf(e.memory.author_id)])}
                   seed={i * 1.7 + 2}
-                  {...wetness(e.date)}
+                  {...(fresh?.has(e.memory.id) ? FRESH : wetness(e.date))}
                 />
                 <span ref={setNode} className="run-anchor" aria-hidden="true" />
                 <span className="run-text">
@@ -142,6 +168,7 @@ export default function Timeline({ memories, intentions, history, colorOf, toget
                   ) : (
                     <span className="run-line">{e.memory.body.split('\n')[0] || e.memory.place}</span>
                   )}
+                  {fresh?.has(e.memory.id) && <span className="sr-only">{t.timeline.fresh}</span>}
                 </span>
               </Link>
             )}

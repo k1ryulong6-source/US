@@ -639,6 +639,34 @@ details > summary::-webkit-details-marker {
   margin-bottom: 8px;
 }
 
+/* a memory from this day, years ago, surfacing on its own */
+.on-this-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 10px auto 0;
+  max-width: 320px;
+  text-decoration: none;
+}
+.on-this-day-pool {
+  width: 44px;
+  height: 44px;
+  flex: none;
+}
+.on-this-day-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.5;
+}
+.on-this-day .run-line {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* the centre axis: plans in pencil above, the run of paint below */
 .plans {
   position: relative;
@@ -1197,6 +1225,24 @@ details > summary::-webkit-details-marker {
   width: min(52vw, 200px);
   aspect-ratio: 1;
   margin: 0 auto 6px;
+}
+/* a code to read off one screen and type into another */
+.move-code {
+  text-align: center;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 30px;
+  letter-spacing: 0.18em;
+  margin: 18px 0 6px;
+  color: var(--ink);
+}
+.login-page .link.center-self {
+  align-self: center;
+  margin-top: 10px;
+}
+.move-input {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
 }
 .onboarding .wet-sheet {
   width: min(56vw, 210px);

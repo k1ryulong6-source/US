@@ -1,0 +1,43 @@
+# Supabase pauses free projects after a week without activity, and US is an app people
+# open now and then. Once a day this asks the database one tiny question, so it stays awake.
+#
+# Setup (once): GitHub → this repo → Settings → Secrets and variables → Actions →
+# New repository secret:
+#   SUPABASE_URL       the Project URL (https://xxxx.supabase.co)
+#   SUPABASE_ANON_KEY  the anon / publishable key (safe to share; never the service_role key)
+#
+# Scheduled workflows only run from the default branch (main).
+
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ask the database one question
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "SUPABASE_URL / SUPABASE_ANON_KEY secrets are not set; nothing to do."
+            exit 0
+          fi
+          # an anonymous visitor sees no rows, but the query still runs in the database
+          status=$(curl -sS -o /dev/null -w '%{http_code}' \
+            "$SUPABASE_URL/rest/v1/prompts?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          echo "Supabase answered $status"
+          case "$status" in
+            2*|401|403) exit 0 ;;
+            *) exit 1 ;;
+          esac

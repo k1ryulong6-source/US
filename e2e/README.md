@@ -27,6 +27,7 @@ node memories.mjs             # one flow; screenshots land in e2e/shots/
 | `phase_e.mjs` | timeline, export ZIP, leaving a US with your content |
 | `export_photos.mjs` | avatar and relationship photo reach the export ZIP |
 | `noemail.mjs` | start without email (anonymous sign-in) |
+| `together.mjs` | moving to another device with a code, wet marks for what's new, 那年今天, proposals passing after 14 quiet days |
 | `design.mjs` | colours, avatar, cover, soaked photos with WebGL on (`GL=1`) |
 
 Environment: `E2E_BASE` (app URL), `E2E_SHOTS` (screenshot folder), `CHROMIUM_PATH`, `GL=1`.

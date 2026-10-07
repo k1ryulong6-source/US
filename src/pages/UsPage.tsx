@@ -6,7 +6,7 @@ import { useUs } from '../lib/useUs';
 import { useSignedUrls } from '../lib/useSignedUrls';
 import { setCover } from '../lib/media';
 import { usColors } from '../lib/palette';
-import { CLEAR_WATER } from '../lib/washes';
+import { CLEAR_WATER, pool } from '../lib/washes';
 import { displayName } from '../lib/format';
 import { t } from '../strings';
 import Timeline from '../components/Timeline';
@@ -79,10 +79,36 @@ export default function UsPage() {
     })();
   }, [id, session]);
 
+  // What others added since my last visit is still wet this time (only I see it). Once per visit.
+  const [fresh, setFresh] = useState<Set<string>>(new Set());
+  const visited = useRef<string | null>(null);
+  useEffect(() => {
+    if (!session || visited.current === id) return;
+    visited.current = id;
+    supabase.rpc('visit_us', { p_us: id }).then(({ data }) => setFresh(new Set((data as string[] | null) ?? [])));
+  }, [id, session]);
+
   const colors = useMemo(
     () => usColors(members.map((m) => ({ user_id: m.user_id, color: m.profiles?.color })), me),
     [members, me],
   );
+
+  // "那年今天": a memory from this day in an earlier year comes back up by itself, quietly
+  const onThisDay = useMemo(() => {
+    const now = new Date();
+    const md = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return (
+      (memories ?? [])
+        .filter(
+          (m) =>
+            m.happened_precision === 'day' &&
+            !m.author_removed &&
+            m.happened_on.slice(5) === md &&
+            Number(m.happened_on.slice(0, 4)) < now.getFullYear(),
+        )
+        .sort((a, b) => b.happened_on.localeCompare(a.happened_on))[0] ?? null
+    );
+  }, [memories]);
 
   if (missing) return <Navigate to="/" replace />;
   if (!space) return <p className="quiet center pad">{t.common.loading}</p>;
@@ -141,6 +167,16 @@ export default function UsPage() {
       {space.description && <p className="us-desc pre">{space.description}</p>}
       <ErrorNote show={photoFailed} text={t.photo.failed} />
 
+      {onThisDay && (
+        <Link to={`/us/${space.id}/m/${onThisDay.id}`} className="on-this-day">
+          <Wash className="on-this-day-pool" drops={pool([colorOf(onThisDay.author_id)])} seed={4.4} flow={0.02} strength={0.8} />
+          <span className="on-this-day-text">
+            <span className="small quiet">{t.us.onThisDay(onThisDay.happened_on.slice(0, 4))}</span>
+            <span className="run-line">{onThisDay.body.split('\n')[0] || onThisDay.place}</span>
+          </span>
+        </Link>
+      )}
+
       {space.state === 'quiet' && <p className="quiet center small">{t.us.quietNote}</p>}
       {space.state === 'closed' && <p className="quiet center small">{t.us.closedNote}</p>}
       {proposalWaiting && (
@@ -193,6 +229,7 @@ export default function UsPage() {
           colorOf={colorOf}
           together={together}
           head={today}
+          fresh={fresh}
         />
       )}
 

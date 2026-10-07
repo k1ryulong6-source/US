@@ -30,8 +30,12 @@ export default function Home() {
   const [reordering, setReordering] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [failed, setFailed] = useState(false);
+  // US where others added something since my last visit: their paint is still moving (only I see it)
+  const [news, setNews] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
+    // proposals nobody declined for 14 days take effect when someone next comes by
+    await supabase.rpc('settle_proposals', {});
     const { data, error } = await supabase
       .from('my_us_list')
       .select('*')
@@ -41,6 +45,8 @@ export default function Home() {
     const list = (data as MyUsListItem[]) ?? [];
     setItems(list);
     if (!list.length) return;
+    const { data: news } = await supabase.rpc('us_with_news');
+    setNews(new Set((news as string[] | null) ?? []));
     const { data: ms } = await supabase
       .from('us_members')
       .select('us_id, user_id, joined_at, profiles!us_members_user_id_fkey(color)')
@@ -95,7 +101,7 @@ export default function Home() {
                 <Wash
                   className="us-wash"
                   drops={usWash(colors.get(us.id) ?? [])}
-                  flow={quiet ? 0 : index === 0 ? 0.045 : 0.06}
+                  flow={quiet ? 0 : news.has(us.id) ? 0.12 : index === 0 ? 0.045 : 0.06}
                   strength={quiet ? 0.5 : 1}
                   seed={index * 3.1 + 1.3}
                   scale={index === 0 ? 0.78 : 0.9}
@@ -103,6 +109,7 @@ export default function Home() {
                 <span className={quiet ? 'us-wash-name quiet' : 'us-wash-name'}>
                   {us.name}
                   {quiet && <span className="sr-only"> · {t.states[us.state]}</span>}
+                  {news.has(us.id) && <span className="sr-only"> · {t.home.fresh}</span>}
                 </span>
               </Link>
               {reordering && (
