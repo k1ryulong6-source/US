@@ -214,6 +214,11 @@ export class Painter {
   private frame = 0;
   private failed = new WeakSet<HTMLCanvasElement>();
 
+  /** wait for the GPU to finish this frame (only for measuring) */
+  finish() {
+    this.gl.finish();
+  }
+
   static create(canvas: HTMLCanvasElement): Painter | null {
     const gl = canvas.getContext('webgl', { premultipliedAlpha: false, antialias: false, alpha: false });
     if (!gl) return null;

@@ -52,7 +52,9 @@ export function PaperProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const el = canvas.current;
     if (!el) return;
+    const tc = performance.now();
     const painter = Painter.create(el);
+    (window as unknown as { __paperCompileMs: number }).__paperCompileMs = performance.now() - tc;
     if (!painter) {
       el.style.display = 'none'; // no WebGL: the CSS paper colour carries the page
       setCanPaint(false);
@@ -73,6 +75,17 @@ export function PaperProvider({ children }: { children: ReactNode }) {
     // below, and is moved and repainted at most ~30 times a second, or sooner when a fast
     // scroll gets close to the edge of what was painted.
     let paintedAt = -1;
+    // measuring (localStorage us-perf=1): frames painted, time spent, what was on screen
+    const perf = (() => {
+      try {
+        if (localStorage.getItem('us-perf') !== '1') return null;
+      } catch {
+        return null;
+      }
+      const stats = { frames: 0, ms: 0, drops: 0, washes: 0 };
+      (window as unknown as { __paper: typeof stats }).__paper = stats;
+      return stats;
+    })();
     let paintedScroll = 0;
 
     const frame = (ts: number) => {
@@ -131,6 +144,7 @@ export function PaperProvider({ children }: { children: ReactNode }) {
       const height = vh + 2 * over;
       el.style.height = `${height}px`;
       el.style.transform = `translate3d(0, ${sy - over}px, 0)`;
+      const t1 = perf ? performance.now() : 0;
       painter.render({
         scene,
         time,
@@ -144,6 +158,13 @@ export function PaperProvider({ children }: { children: ReactNode }) {
         paperDark: PAPER_DARK,
         dark: dark.matches,
       });
+      if (perf) {
+        painter.finish();
+        perf.frames++;
+        perf.ms += performance.now() - t1;
+        perf.drops = drops;
+        perf.washes = scene.washes.length;
+      }
     };
     raf = requestAnimationFrame(frame);
     return () => {
