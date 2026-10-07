@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { useAuth } from './lib/auth';
 import { t } from './strings';
 import Layout from './components/Layout';
@@ -21,6 +21,7 @@ import Answer from './pages/Answer';
 import Intentions from './pages/Intentions';
 import IntentionDone from './pages/IntentionDone';
 import Export from './pages/Export';
+import Splash, { shouldSplash } from './components/Splash';
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { ready, session, profile } = useAuth();
@@ -35,6 +36,10 @@ function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
+  // the opening plays once each time the app is launched; sign-in loads meanwhile
+  const [splash, setSplash] = useState(shouldSplash);
+  const done = useCallback(() => setSplash(false), []);
+  if (splash) return <Splash onDone={done} />;
   return (
     <Routes>
       <Route path="/login" element={<Login />} />

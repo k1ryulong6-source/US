@@ -43,6 +43,9 @@ const zhCN = {
     quiet: '安静中',
     closed: '已合上',
   },
+  splash: {
+    skip: '跳过开场',
+  },
   move: {
     title: '换到另一台设备',
     explain: '在另一台手机上，或者主屏幕上的 US 里输入换设备码，就能接着用现在的身份，不需要邮箱。',

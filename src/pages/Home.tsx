@@ -10,6 +10,7 @@ import ErrorNote from '../components/ErrorNote';
 import WeeklyQuestion from '../components/WeeklyQuestion';
 import Wash from '../components/Wash';
 import { PencilLoop } from '../components/Pencil';
+import { rememberSplashColors } from '../components/Splash';
 
 interface MemberColor {
   us_id: string;
@@ -61,6 +62,9 @@ export default function Home() {
       next.set(usId, [resolved.get(me), ...members.filter((m) => m.user_id !== me).map((m) => resolved.get(m.user_id))].filter(Boolean) as string[]);
     }
     setColors(next);
+    // the next launch opens with the colours of your first US
+    const first = list.find((u) => !u.hidden);
+    if (first && next.get(first.id)?.length) rememberSplashColors(next.get(first.id)!);
   }, [me]);
 
   useEffect(() => {
