@@ -208,7 +208,7 @@ const JO = 1.62;          // m² per 帖 (real-estate convention)
 const WALL_T = 0.1;       // wall thickness, m (plan lines are wall centre lines, 芯々)
 const LS_KEY = 'kosuge2k-planner-v4';
 
-const CATS = [['bedroom','卧室'],['living','客厅·书房'],['kitchen','厨房·家电'],['storage','收纳'],['decor','软装'],['fixed','固定设备']];
+const CATS = [['bedroom','卧室'],['living','客厅·书房'],['kitchen','厨房·家电'],['storage','收纳'],['decor','软装'],['art','挂画·和室'],['fixed','固定设备']];
 const ITEMS = {
   bedS:{n:'单人床',jp:'シングル',cat:'bedroom',w:.97,d:1.95,h:.45,c:'#c8a77e',b:'bed'},
   bedSD:{n:'半双人床',jp:'セミダブル',cat:'bedroom',w:1.2,d:1.95,h:.45,c:'#c8a77e',b:'bed'},
@@ -240,6 +240,16 @@ const ITEMS = {
   plant:{n:'绿植',jp:'観葉植物',cat:'decor',w:.45,d:.45,h:1.2,c:'#6f8f6a',b:'plant'},
   lamp:{n:'落地灯',jp:'フロアライト',cat:'decor',w:.35,d:.35,h:1.6,c:'#efe6d2',b:'lamp'},
   curtain:{n:'窗帘',jp:'カーテン',cat:'decor',w:1.8,d:.08,h:1.95,c:'#d8d2c4',b:'curtain',soft:1,inWall:1},
+  frame:{n:'挂画',jp:'絵',cat:'art',w:.9,d:.03,h:.7,c:'#c4532d',b:'frame',inWall:1},
+  photo:{n:'相片(白卡框)',jp:'写真',cat:'art',w:.5,d:.03,h:.6,c:'#777777',b:'photo',inWall:1},
+  spot:{n:'夹灯(夹在長押上)',jp:'クリップライト',cat:'art',w:.1,d:.15,h:.15,c:'#1e1e1e',b:'spot',soft:1,inWall:1},
+  roundRug:{n:'圆地毯',jp:'ラウンドラグ',cat:'decor',w:1.6,d:1.6,h:.01,c:'#2b3a55',b:'roundRug',soft:1},
+  paperLamp:{n:'和纸灯',jp:'和紙ランプ',cat:'decor',w:.55,d:.55,h:.9,c:'#f3eee4',b:'paperLamp',soft:1},
+  banner:{n:'挂布',jp:'タペストリー',cat:'decor',w:1.2,d:.02,h:1.8,c:'#2b3a55',b:'banner',soft:1,inWall:1},
+  uplight:{n:'地面上照灯',jp:'アッパーライト',cat:'decor',w:.2,d:.2,h:.25,c:'#2a2a2a',b:'uplight',soft:1},
+  loungeChair:{n:'单人休闲椅',jp:'ラウンジチェア',cat:'living',w:.7,d:.75,h:.75,c:'#6b4a33',b:'loungeChair'},
+  chabudai:{n:'矮圆桌',jp:'ちゃぶ台',cat:'art',w:.75,d:.75,h:.33,c:'#6b4a33',b:'chabudai'},
+  zabuton:{n:'坐垫',jp:'座布団',cat:'art',w:.55,d:.59,h:.08,c:'#2f3e55',b:'zabuton',soft:1},
   box:{n:'自定义方块',jp:'カスタム',cat:'decor',w:.6,d:.6,h:.6,c:'#9aa5a0',b:'box'},
   counter:{n:'流理台',jp:'キッチン',cat:'fixed',w:1.8,d:.6,h:.85,c:'#eceae4',b:'counter',fixed:1},
   vanity:{n:'洗面台',jp:'洗面台',cat:'fixed',w:.6,d:.45,h:.85,c:'#f4f4f2',b:'vanity',fixed:1},
@@ -252,7 +262,7 @@ const ITEMS = {
   outlet:{n:'插座',jp:'コンセント',cat:'fixed',w:.07,d:.012,h:.12,c:'#f4f4f2',b:'outlet',fixed:1,soft:1,inWall:1},
   ac:{n:'空调',jp:'エアコン',cat:'fixed',w:.8,d:.25,h:.28,c:'#f4f4f2',b:'ac',fixed:1},
   tenbukuro:{n:'天袋(吊柜)',jp:'天袋',cat:'fixed',w:1.7,d:.86,h:.55,c:'#d9c6a5',b:'wardrobe',fixed:1},
-  loft:{n:'阁楼 ロフト',jp:'ロフト',cat:'fixed',w:3.54,d:1.25,h:.9,c:'#b58a5e',b:'loft',fixed:1},
+  loft:{n:'阁楼 ロフト',jp:'ロフト',cat:'fixed',w:3.54,d:1.25,h:.9,c:'#b58a5e',b:'loft',fixed:1,soft:1},
   ladder:{n:'阁楼梯子',jp:'はしご',cat:'fixed',w:.5,d:1.3,h:2.4,c:'#a8743f',b:'ladder',fixed:1},
   beam:{n:'原木装饰梁',jp:'梁',cat:'fixed',w:.2,d:1.45,h:.2,c:'#8a5a35',b:'beam',fixed:1,soft:1,inWall:1},
   person:{n:'参照小人',jp:'身高可改',cat:'decor',w:.45,d:.25,h:1.7,c:'#4a6a8a',b:'person',soft:1}
@@ -988,6 +998,35 @@ function mk(geo, color, opts){
 }
 function bx(g, w, h, d, color, x, y, z, opts){ const m = mk(new THREE.BoxGeometry(Math.max(w, .005), Math.max(h, .005), Math.max(d, .005)), color, opts); m.position.set(x, y + h / 2, z); g.add(m); return m; }
 function cyl(g, r1, r2, h, color, x, y, z, seg){ const m = mk(new THREE.CylinderGeometry(r1, r2, h, seg || 20), color); m.position.set(x, y + h / 2, z); g.add(m); return m; }
+/* procedural artworks: colour-field paintings seeded by the item colour, and black-and-white "photographs" */
+const artCache = new Map();
+function artTex(mode, color){
+  const key = mode + color; if (artCache.has(key)) return artCache.get(key);
+  const N = 256, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d');
+  const rnd = mulberry(parseInt(color.slice(1), 16) + mode.length * 131);
+  if (mode === 'paint'){
+    const pal = [color, '#e8dcc2', '#1f2430', '#c4532d', '#2f3e55', '#b8902f', '#6f7a52', '#f2eee6'];
+    g.fillStyle = shade(color, -.25); g.fillRect(0, 0, N, N);
+    for (let i = 0; i < 3; i++){
+      const y = 12 + i * (N - 24) / 3 + rnd() * 8, h = (N - 24) / 3 - 14 - rnd() * 10;
+      g.fillStyle = pal[Math.floor(rnd() * pal.length)]; g.globalAlpha = .9; g.fillRect(14 + rnd() * 6, y, N - 28 - rnd() * 10, h);
+    }
+    g.globalAlpha = .25;
+    for (let i = 0; i < 400; i++){ g.fillStyle = rnd() < .5 ? '#000' : '#fff'; g.fillRect(rnd() * N, rnd() * N, 1 + rnd() * 3, 1); }
+    g.globalAlpha = 1;
+  } else {
+    // b/w landscape: sky gradient, horizon, a dark foreground mass
+    const v = rnd(), sky = g.createLinearGradient(0, 0, 0, N);
+    sky.addColorStop(0, v < .5 ? '#d9d9d9' : '#8a8a8a'); sky.addColorStop(.55, '#f2f2f2'); sky.addColorStop(.56, '#6d6d6d'); sky.addColorStop(1, '#1e1e1e');
+    g.fillStyle = sky; g.fillRect(0, 0, N, N);
+    g.fillStyle = '#141414'; g.beginPath(); g.moveTo(0, N);
+    for (let x = 0; x <= N; x += 16) g.lineTo(x, N * (.62 + .12 * Math.sin(x / 40 + v * 6) + rnd() * .05));
+    g.lineTo(N, N); g.fill();
+    if (rnd() < .6){ g.fillStyle = '#0d0d0d'; const tx = 40 + rnd() * 170; g.fillRect(tx, N * .3, 4, N * .4); g.beginPath(); g.arc(tx + 2, N * .3, 22, 0, Math.PI * 2); g.fill(); }
+  }
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = maxAniso;
+  artCache.set(key, t); return t;
+}
 const BUILD = {
   box(g, w, d, h, c){ bx(g, w, h, d, c, 0, 0, 0); },
   person(g, w, d, h, c){
@@ -1118,6 +1157,58 @@ const BUILD = {
     bx(g, w, h, d, c, 0, 0, 0);
     for (const y of [h * .62, h * .25]) for (const x of [-.012, .012]) bx(g, .006, .018, .004, '#555', x, y, d / 2);
   },
+  frame(g, w, d, h, c){
+    bx(g, w, h, d, '#1d1d1d', 0, 0, 0);
+    bx(g, w - .05, h - .05, .004, '#ffffff', 0, .025, d / 2, {map:artTex('paint', c), roughness:.9});
+  },
+  photo(g, w, d, h, c){
+    bx(g, w, h, d, '#e9e6df', 0, 0, 0);
+    bx(g, w * .7, h * .6, .004, '#ffffff', 0, h * .25, d / 2, {map:artTex('photo', c), roughness:.6});
+  },
+  spot(g, w, d, h, c){
+    bx(g, .04, .06, .05, '#333', 0, h - .06, -d / 2 + .025);
+    const s = mk(new THREE.CylinderGeometry(.03, .045, .11, 16), c); s.rotation.x = .9; s.position.set(0, h - .09, .02); g.add(s);
+    const lens = mk(new THREE.CircleGeometry(.04, 16), '#fff6dc', {emissive:lin('#fff1cf'), emissiveIntensity:1}); lens.rotation.x = .9 - Math.PI / 2; lens.position.set(0, h - .13, .07); lens.userData.lampGlow = true; g.add(lens);
+  },
+  roundRug(g, w, d, h, c){ cyl(g, w / 2, w / 2, Math.max(h, .01), c, 0, 0, 0, 48); cyl(g, w / 2 - .08, w / 2 - .08, .003, shade(c, .12), 0, Math.max(h, .01), 0, 48); },
+  paperLamp(g, w, d, h, c){
+    // washi lamp: a column on the floor when tall, otherwise a globe on a cord
+    const glow = {emissive:lin('#fff1d6'), emissiveIntensity:.85, roughness:.9};
+    if (h > w * 1.3){
+      cyl(g, w * .3, w * .32, .03, '#3a2a20', 0, 0, 0);
+      const b = cyl(g, w / 2, w / 2 * .9, h - .05, c, 0, .05, 0, 24); Object.assign(b.material, glow); b.material.emissive = lin('#fff1d6'); b.userData.lampGlow = true;
+      for (let i = 1; i < 6; i++){ const r = mk(new THREE.TorusGeometry(w / 2 * (1 - .02 * i), .004, 4, 24), '#c9bfae'); r.rotation.x = Math.PI / 2; r.position.y = .05 + (h - .05) * i / 6; g.add(r); }
+    } else {
+      const b = mk(new THREE.SphereGeometry(w / 2, 28, 18), c, glow); b.scale.y = h / w; b.position.y = h / 2; b.userData.lampGlow = true; g.add(b);
+      for (let i = 1; i < 6; i++){ const t = -1 + i / 3, rr = w / 2 * Math.sqrt(1 - t * t); const r = mk(new THREE.TorusGeometry(rr + .002, .003, 4, 28), '#c9bfae'); r.rotation.x = Math.PI / 2; r.position.y = h / 2 + t * h / 2; g.add(r); }
+      cyl(g, .004, .004, 1.2, '#dddddd', 0, h, 0, 6);
+    }
+  },
+  banner(g, w, d, h, c){
+    // a long hand-dyed cloth, tied on at the top
+    const n = Math.max(3, Math.round(w / .18)), sw = w / n;
+    for (let i = 0; i < n; i++) bx(g, sw * 1.03, h, .008, shade(c, i % 2 ? -.04 : .03), -w / 2 + sw * (i + .5), 0, i % 2 ? .006 : -.006, {roughness:1});
+    bx(g, w, .06, .016, shade(c, .45), 0, h * .22, 0, {roughness:1});
+    bx(g, w + .08, .025, .025, '#6b4a33', 0, h, 0);
+  },
+  uplight(g, w, d, h, c){
+    cyl(g, w / 2, w / 2 * .8, h, c, 0, 0, 0);
+    const top = mk(new THREE.CircleGeometry(w / 2 - .02, 20), '#fff4dc', {emissive:lin('#fff1cf'), emissiveIntensity:1}); top.rotation.x = -Math.PI / 2; top.position.y = h + .002; top.userData.lampGlow = true; g.add(top);
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(.55, 1.8, 24, 1, true), new THREE.MeshBasicMaterial({color:lin('#fff1cf'), transparent:true, opacity:.07, depthWrite:false, side:THREE.DoubleSide}));
+    cone.rotation.x = Math.PI; cone.position.y = h + .9; cone.renderOrder = 3; g.add(cone);
+  },
+  loungeChair(g, w, d, h, c){
+    const cush = '#cbc3b5';
+    for (const sd of [-1, 1]){ bx(g, .05, .55, d * .9, c, sd * (w / 2 - .025), 0, 0); bx(g, .06, .04, d * .9, c, sd * (w / 2 - .03), .55, 0); }
+    bx(g, w - .1, .12, d - .2, cush, 0, .26, .05, {roughness:1});
+    const back = bx(g, w - .1, h - .3, .12, cush, 0, .3, -d / 2 + .12, {roughness:1}); back.rotation.x = -.22;
+    bx(g, w - .1, .04, .04, c, 0, .22, d / 2 - .1); bx(g, w - .1, .04, .04, c, 0, .22, -d / 2 + .1);
+  },
+  chabudai(g, w, d, h, c){
+    cyl(g, w / 2, w / 2, .03, c, 0, h - .03, 0, 40);
+    for (const a of [0, 1, 2, 3]){ const t = a * Math.PI / 2 + Math.PI / 4; bx(g, .04, h - .03, .04, shade(c, -.15), Math.cos(t) * w * .33, 0, Math.sin(t) * w * .33); }
+  },
+  zabuton(g, w, d, h, c){ bx(g, w, h, d, c, 0, 0, 0, {roughness:1}); bx(g, .05, .01, .05, '#c9b48a', 0, h, 0); },
   microwave(g, w, d, h, c){
     bx(g, w, h, d, c, 0, 0, 0, {roughness:.4});
     bx(g, w * .62, h * .7, .006, '#2a2d30', -w * .12, h * .15, d / 2, {roughness:.15, metalness:.3});
@@ -1449,13 +1540,75 @@ function designItems(){
     P('stove', 4.95, 1.95, 90, {y:.85})
   ];
 }
-function applyDesign(){
+/* the artist — 「满与空」: the two rooms as a diptych. The 洋室 is soaked in indigo and full; the 和室 is
+   emptied almost to nothing (間). The one accent colour is the old lacquer red of the kitchen floor. */
+function artistItems(){
+  const P = (t, x, z, rot, extra) => Object.assign(I(t, x, z, rot), {locked:false}, extra || {});
+  const ai = '#24314a', red = '#8a2a1e';
+  return [
+    // 洋室 — full
+    P('roundRug', 1.6, .95, 0, {w:1.6, d:1.6, c:'#2b3a55', name:'靛蓝圆地毯 Ø160'}),
+    P('sofa3', 1.6, 1.45, 180, {w:2.0, d:.9, h:.55, c:ai, name:'大低床榻 200×90(靛蓝, 当沙发也当客床)'}),
+    P('lowTable', 1.6, .55, 0, {w:.7, d:.4, h:.3, c:red, name:'朱漆矮几'}),
+    P('shelf', .2, .95, 270, {w:1.5, d:.3, h:.8, c:'#3a2a20', name:'矮书架 150(书、器物)'}),
+    P('paperLamp', 1.6, .95, 0, {y:1.7, w:.8, d:.8, h:.8, name:'大和纸灯 Ø80(从屋脊垂下)'}),
+    P('banner', 1.6, 1.36, 0, {y:1.5, w:1.1, h:1.7, c:'#2b3a55', name:'靛染长布(系在阁楼栏杆上垂下)'}),
+    P('plant', 2.6, .3, 0, {w:.5, d:.5, h:1.9, c:'#5a6b48', name:'一大枝枝条(插在陶罐里)'}),
+    // the threshold: a red thread curtain, the colour lifted from the kitchen floor
+    P('curtain', .925, 3.64, 0, {w:1.75, h:1.2, y:.6, c:red, name:'朱红丝线门帘'}),
+    // 和室 — empty
+    P('futon', 3.2, 4.25, 0, {w:.7, d:1.0, h:.3, c:'#f2efe8', name:'白天叠起的被褥'}),
+    P('paperLamp', .7, 5.95, 0, {w:.55, d:.55, h:1.2, name:'落地和纸灯 高120'}),
+    P('banner', 3.575, 4.6, 90, {y:.6, w:1.8, h:1.2, c:'#ece6da', name:'長押上的一幅横布'}),
+    P('plant', 2.2, 6.05, 0, {w:.3, d:.3, h:.6, c:'#6f7a52', name:'一枝花'}),
+    P('fridge', 4.96, 2.62, 90, {w:.5, d:.6, h:1.2, name:'冰箱 2门约150L(高≤120)'}),
+    P('microwave', 4.96, 2.62, 90, {y:1.2}), P('stove', 4.95, 1.95, 90, {y:.85})
+  ];
+}
+/* the photographer — 「光的房子」: every window is frosted, so they give light, not views. Life follows the
+   light (east light wakes you in the 和室, west light ends the day in the 洋室), the walls are a soft grey so the
+   light itself is the colour, and each sightline ends on one chosen object. */
+function photoItems(){
+  const P = (t, x, z, rot, extra) => Object.assign(I(t, x, z, rot), {locked:false}, extra || {});
+  const sheer = '#f1ece2';
+  return [
+    // 洋室 — the first frame you see through the kitchen door: one chair and a lamp against the grey wall
+    P('loungeChair', .425, 2.2, 270, {name:'单人休闲椅(进门第一眼的主角)'}),
+    P('lamp', .25, 1.55, 0, {h:1.5, name:'落地灯 2700K'}),
+    P('sofa2', 2.6, 1.3, 90, {w:1.3, d:.8, h:.65, c:'#8c8a85', name:'低背沙发(西窗光从侧面打来)'}),
+    P('rug', 1.65, 1.3, 90, {w:1.6, d:1.2, c:'#b9b2a6', name:'暖灰地毯'}),
+    P('lowTable', 1.6, 1.3, 0, {w:.9, d:.5, h:.33, c:'#1e1e1e', name:'哑光黑矮几'}),
+    P('paperLamp', 1.6, 1.3, 0, {y:1.45, w:.4, d:.4, h:.3, name:'低吊灯(只照亮桌面)'}),
+    P('uplight', 2.6, .35, 0, {name:'地面上照灯(打亮斜顶和原木梁)'}),
+    P('curtain', 1.83, .17, 0, {w:1.95, h:1.7, y:.3, c:sheer, name:'亚麻纱帘(夜里用)'}),
+    P('curtain', .17, .89, 90, {w:1.85, h:1.3, y:.7, c:sheer, name:'亚麻纱帘'}),
+    // 和室 — morning room; the end of the sightline from the 洋室 is a big plant backlit by the east window
+    P('bedSD', 2.615, 4.75, 90, {h:.25, c:'#9c8f80', name:'低床(东窗晨光叫醒你)'}),
+    P('plant', 1.1, 6.0, 0, {w:.6, d:.6, h:1.6, c:'#4f6b45', name:'大叶植物(两室视线尽头, 逆光剪影)'}),
+    P('chabudai', 2.1, 5.85, 0, {w:.6, d:.6, h:.33, name:'早餐小圆桌(东窗边)'}),
+    P('zabuton', 2.65, 5.85, 270, {c:'#8c8a85'}),
+    P('mirror', 3.15, 3.73, 0, {w:.8, h:1.8, c:'#2a2a2a', name:'大落地镜(把阳台窗的光反射进屋)'}),
+    P('photo', 3.575, 4.75, 90, {w:.9, h:.6, y:1.0, c:'#3a3a3a', name:'一张黑白照片(長押上)'}),
+    P('curtain', .17, 4.545, 90, {w:1.9, h:1.6, y:.3, c:sheer, name:'亚麻纱帘'}),
+    P('curtain', 1.82, 6.2, 0, {w:1.85, h:1.6, y:.3, c:sheer, name:'亚麻纱帘'}),
+    P('fridge', 4.96, 2.62, 90, {w:.5, d:.6, h:1.2, name:'冰箱 2门约150L(高≤120)'}),
+    P('microwave', 4.96, 2.62, 90, {y:1.2}), P('stove', 4.95, 1.95, 90, {y:.85})
+  ];
+}
+const SCHEMES = {
+  designer:{n:'居住设计师', d:'和室卧室，洋室起居+工作。低矮家具，木色+亚麻+靛蓝。', wall:'#e6d8c3', items:designItems, person:[2.7, .95, 90]},
+  artist:{n:'艺术家 · 满与空', d:'两间房做成一组对照：洋室浸在靛蓝里，饱满；和室几乎清空，只留「间」。门帘的朱红取自厨房那块旧红地板。', wall:'#efebe3', items:artistItems, person:[3.25, 2.3, 121]},
+  photo:{n:'摄影师 · 光的房子', d:'窗全是磨砂玻璃，只进光不看景。生活跟着光走：东窗叫醒你，西窗送走一天。灰墙让光成为颜色，每条视线尽头只放一件主角。', wall:'#9c9890', items:photoItems, person:[3.35, 2.25, 90]}
+};
+function applyScheme(key){
+  const sc = SCHEMES[key];
   const keep = S.items.filter(i => (ITEMS[i.t] || {}).fixed || i.locked);
   const person = S.items.find(i => i.t === 'person');
-  if (person) Object.assign(person, {x:2.7, z:.95, rot:90});
-  S.items = keep.concat(person ? [person] : [], designItems());
-  selId = null; buildFurniture(); checkProblems(); commit(); drawSelHelpers(); renderFurn();
-  showTip('已载入设计师方案 · 不满意可以点「撤销」', 4000);
+  if (person) Object.assign(person, {x:sc.person[0], z:sc.person[1], rot:sc.person[2]});
+  S.items = keep.concat(person ? [person] : [], sc.items());
+  S.wallColor = sc.wall;
+  selId = null; rebuildStructure(); buildFurniture(); checkProblems(); commit(); drawSelHelpers(); renderFurn();
+  showTip('已载入「' + sc.n + '」· 不满意点「撤销」', 4000);
 }
 
 /* ---------- furniture pane ---------- */
@@ -1519,7 +1672,8 @@ function renderFurn(){
       '</div></section>';
   } else {
     h += '<section><h2>选中的家具</h2><div class="empty">在图里点一下家具选中它，再按住拖动；或从下面的目录添加，新家具会放在视图中心。</div></section>';
-    h += '<section><h2>设计师方案</h2><div class="card"><p class="hint"><b>和室做卧室，洋室做起居和工作。</b>低矮家具衬出斜顶的高度，木色跟原有木框一致，配亚麻色和靛蓝。会替换你放的家具（房东设备不动），可以撤销。</p><button type="button" class="btn primary" id="f-design" style="align-self:flex-start">载入设计师方案</button></div></section>';
+    h += '<section><h2>方案</h2><p class="hint">载入会替换你放的家具和墙色（房东设备不动），可以撤销。</p>' + Object.entries(SCHEMES).map(([k, v]) =>
+      '<div class="card"><header><b>' + v.n + '</b></header><p class="hint">' + v.d + '</p><button type="button" class="btn primary" data-scheme="' + k + '" style="align-self:flex-start">载入</button></div>').join('') + '</section>';
   }
   h += '<section><h2>添加家具</h2><p class="hint">尺寸按日本常见规格预设，添加后可改成你实际要买的尺寸。</p>';
   for (const [k, n] of CATS){
@@ -1529,7 +1683,7 @@ function renderFurn(){
   h += '</section><section><h2>已摆放 <span id="f-count" class="meta"></span></h2><div class="list" id="f-list"></div></section>';
   p.innerHTML = h;
   p.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => addItem(b.dataset.add)));
-  const db = $('#f-design'); if (db) db.addEventListener('click', applyDesign);
+  p.querySelectorAll('[data-scheme]').forEach(b => b.addEventListener('click', () => applyScheme(b.dataset.scheme)));
   renderFurnList();
   if (!it) return;
   const card = p.querySelector('.card');
