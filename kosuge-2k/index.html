@@ -249,6 +249,7 @@ const ITEMS = {
   uplight:{n:'地面上照灯',jp:'アッパーライト',cat:'decor',w:.2,d:.2,h:.25,c:'#2a2a2a',b:'uplight',soft:1},
   recliner:{n:'单人沙发(机械可弹出)',jp:'リクライナー',cat:'living',w:.85,d:.95,h:1.0,c:'#6e6a62',b:'recliner'},
   monitor:{n:'显示器',jp:'モニター',cat:'living',w:.6,d:.2,h:.45,c:'#1c1c1c',b:'tv'},
+  wallPanel:{n:'墙布/可撕墙纸',jp:'はがせる壁紙',cat:'decor',w:1.0,d:.006,h:2.4,c:'#24314a',b:'wallPanel',soft:1,inWall:1},
   ledBar:{n:'灯带(贴在天袋底下)',jp:'LEDバー',cat:'decor',w:.8,d:.04,h:.02,c:'#f4f4f2',b:'ledBar',soft:1,inWall:1},
   loungeChair:{n:'单人休闲椅',jp:'ラウンジチェア',cat:'living',w:.7,d:.75,h:.75,c:'#6b4a33',b:'loungeChair'},
   chabudai:{n:'矮圆桌',jp:'ちゃぶ台',cat:'art',w:.75,d:.75,h:.33,c:'#6b4a33',b:'chabudai'},
@@ -535,7 +536,7 @@ function setView(v){
   document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
   sun.castShadow = v !== 'top';
   gCeil.visible = v === 'walk';
-  amb.intensity = v === 'walk' ? .32 : .12;
+  updateSun();
   S.items.forEach(i => { if (i.t === 'person'){ const g = itemObj.get(i.id); if (g) g.visible = v !== 'walk'; } });
   setTimeout(() => S.items.forEach(fadeOverhead));
   if (v === 'top'){ cam = ortho; ctl = ctlO; ctlP.enabled = false; ctlO.enabled = true; frameTop(); }
@@ -1030,6 +1031,7 @@ function artTex(mode, color){
   const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = maxAniso;
   artCache.set(key, t); return t;
 }
+function addGlow(g, x, y, z, k){ const l = new THREE.PointLight(0xffdcae, k, 4.5, 2); l.position.set(x, y, z); g.add(l); }
 const BUILD = {
   box(g, w, d, h, c){ bx(g, w, h, d, c, 0, 0, 0); },
   person(g, w, d, h, c){
@@ -1101,7 +1103,7 @@ const BUILD = {
     const rnd = mulberry(Math.round(h * 1000));
     for (let i = 0; i < 7; i++){ const s = new THREE.Mesh(new THREE.IcosahedronGeometry(r * (.45 + rnd() * .3), 0), leaf); s.position.set((rnd() - .5) * r, h * (.45 + rnd() * .45), (rnd() - .5) * r); s.castShadow = true; g.add(s); }
   },
-  lamp(g, w, d, h, c){ cyl(g, w * .4, w * .45, .03, '#444', 0, 0, 0); cyl(g, .012, .012, h - .3, '#444', 0, .03, 0); const sh = cyl(g, w * .32, w * .5, .3, c, 0, h - .3, 0); sh.material.emissive = lin(c); sh.material.emissiveIntensity = .35; sh.userData.lampGlow = true; },
+  lamp(g, w, d, h, c){ addGlow(g, 0, h - .2, 0, .8); cyl(g, w * .4, w * .45, .03, '#444', 0, 0, 0); cyl(g, .012, .012, h - .3, '#444', 0, .03, 0); const sh = cyl(g, w * .32, w * .5, .3, c, 0, h - .3, 0); sh.material.emissive = lin(c); sh.material.emissiveIntensity = .35; sh.userData.lampGlow = true; },
   curtain(g, w, d, h, c){
     const n = Math.max(4, Math.round(w / .12)), pw = w / n;
     for (let i = 0; i < n; i++) bx(g, pw * 1.05, h, .025, shade(c, i % 2 ? -.05 : .03), -w / 2 + pw * (i + .5), 0, (i % 2 ? .02 : -.02), {roughness:1});
@@ -1175,6 +1177,7 @@ const BUILD = {
   },
   roundRug(g, w, d, h, c){ cyl(g, w / 2, w / 2, Math.max(h, .01), c, 0, 0, 0, 48); cyl(g, w / 2 - .08, w / 2 - .08, .003, shade(c, .12), 0, Math.max(h, .01), 0, 48); },
   paperLamp(g, w, d, h, c){
+    addGlow(g, 0, h > w * 1.3 ? h * .6 : h / 2, 0, h > w * 1.3 ? .7 : .9);
     // washi lamp: a column on the floor when tall, otherwise a globe on a cord
     const glow = {emissive:lin('#fff1d6'), emissiveIntensity:.85, roughness:.9};
     if (h > w * 1.3){
@@ -1197,8 +1200,10 @@ const BUILD = {
   uplight(g, w, d, h, c){
     cyl(g, w / 2, w / 2 * .8, h, c, 0, 0, 0);
     const top = mk(new THREE.CircleGeometry(w / 2 - .02, 20), '#fff4dc', {emissive:lin('#fff1cf'), emissiveIntensity:1}); top.rotation.x = -Math.PI / 2; top.position.y = h + .002; top.userData.lampGlow = true; g.add(top);
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(.55, 1.8, 24, 1, true), new THREE.MeshBasicMaterial({color:lin('#fff1cf'), transparent:true, opacity:.07, depthWrite:false, side:THREE.DoubleSide}));
-    cone.rotation.x = Math.PI; cone.position.y = h + .9; cone.renderOrder = 3; g.add(cone);
+    const sl = new THREE.SpotLight(0xfff1cf, 2.4, 7, .75, .3, 1.2);
+    sl.position.set(0, h + .02, 0); sl.target.position.set(0, h + 3, 0); sl.castShadow = true;
+    sl.shadow.mapSize.set(1024, 1024); sl.shadow.bias = -.0015; sl.shadow.camera.near = .05;
+    g.add(sl, sl.target);
   },
   recliner(g, w, d, h, c){
     // mechanical recliner: the pale ghost in front is the footrest when it pops out — keep that space clear
@@ -1210,7 +1215,8 @@ const BUILD = {
     bx(g, w - 2 * aw - .04, .1, .62, c, 0, .32, d / 2 + .31, ghost);
     bx(g, w - 2 * aw - .04, .32, .05, c, 0, 0, d / 2 + .6, ghost);
   },
-  ledBar(g, w, d, h, c){ const m = bx(g, w, h, d, c, 0, 0, 0, {emissive:lin('#fff4dc'), emissiveIntensity:1}); m.userData.lampGlow = true; },
+  wallPanel(g, w, d, h, c){ bx(g, w, h, d, c, 0, 0, 0, {roughness:.95}); },
+  ledBar(g, w, d, h, c){ addGlow(g, 0, -.05, 0, .45); const m = bx(g, w, h, d, c, 0, 0, 0, {emissive:lin('#fff4dc'), emissiveIntensity:1}); m.userData.lampGlow = true; },
   loungeChair(g, w, d, h, c){
     const cush = '#cbc3b5';
     for (const sd of [-1, 1]){ bx(g, .05, .55, d * .9, c, sd * (w / 2 - .025), 0, 0); bx(g, .06, .04, d * .9, c, sd * (w / 2 - .03), .55, 0); }
@@ -1438,7 +1444,11 @@ function updateSun(){
   sun.position.set(b.cx + dx * Math.cos(el) * 20, Math.sin(el) * 20, b.cz + dz * Math.cos(el) * 20);
   const warm = 1 - Math.sin(t * Math.PI);
   sun.color.setRGB(1, 0.96 - warm * 0.12, 0.88 - warm * 0.25);
-  sun.intensity = 0.4 + Math.sin(t * Math.PI) * 0.45;
+  // after sunset the sky fades out and only the lamps you placed light the rooms
+  const night = clamp((S.hour - 17.5) / 1.5, 0, 1);
+  sun.intensity = (0.4 + Math.sin(t * Math.PI) * 0.45) * (1 - night);
+  hemi.intensity = .55 * (1 - .85 * night);
+  amb.intensity = (view === 'walk' ? .32 : .12) * (1 - .75 * night);
   $('#compass').style.transform = 'rotate(' + S.northDeg + 'deg)';
 }
 function themeColors(){
@@ -1525,24 +1535,24 @@ const numIn = (k, label, val, opt) => '<label class="f' + (opt && opt.wide ? ' w
    Low furniture under the 洋室's sloped ceiling, warm mid-tone wood to match the existing trims,
    linen and indigo textiles. Every piece keeps the paths, door swings and the ladder foot clear. */
 /* the viewer's own cabinet fits under the upper half of the loft ladder (≥1.2 m clear there) */
-const myCabinet = P => P('chest', 3.38, 1.52, 90, {w:.6, d:.42, h:1.1, c:'#8a6a4a', name:'你的柜子(梯子下, 尺寸待确认)'});
-/* a computer nook in the passage under the 天袋: desk against the south wall, LED bar under the cabinet as a task light */
-const deskNook = P => [
-  P('desk', .325, 3.165, 270, {w:.84, d:.55, c:'#a87b50', name:'电脑桌 84×55(天袋下的工作角)'}),
-  P('monitor', .2, 3.165, 270, {y:.72, name:'显示器'}),
-  P('officeChair', .87, 3.165, 90, {w:.5, d:.5, c:'#2a2a2a', name:'办公椅(不用时推进桌下)'}),
-  P('ledBar', .35, 3.165, 270, {y:1.82, w:.8, name:'灯带(天袋底下当台灯)'})
+const myCabinet = P => P('wardrobe', .275, 2.175, 270, {w:.85, d:.45, h:2.0, c:'#8a6a4a', name:'你的柜子 约2m高(南墙窗右侧, 尺寸待确认)'});
+/* the computer corner: desk against the west wall in the 洋室's south corner, the west window to your right.
+   The viewer's recliner is the desk chair; its footrest pops out under the desk (open knee space, no low crossbar). */
+const workCorner = (P, rc, dc) => [
+  P('desk', .48, .325, 0, {w:.85, d:.55, h:.7, c:dc || '#a87b50', name:'电脑桌 85×55 高70(桌下全空, 脚托伸进去)'}),
+  P('monitor', .48, .15, 0, {y:.7, name:'显示器'}),
+  P('recliner', .48, 1.17, 180, {c:rc, name:'你的单人沙发=电脑椅(虚影=脚托, 伸到桌下)'})
 ];
 function designItems(){
   const P = (t, x, z, rot, extra) => Object.assign(I(t, x, z, rot), {locked:false}, extra || {});
   const oak = '#a87b50', walnut = '#6b4a33', linen = '#e3d9c8', indigo = '#2f3e55', olive = '#5f6b4d';
   return [
     // 洋室 — work corner by the south window, side-lit by the big west window
-    P('desk', .325, .6, 270, {w:1.0, d:.55, c:oak, name:'书桌 100×55'}),
-    P('officeChair', .93, .6, 90, {c:'#2a2a2a', name:'办公椅(下垫地板保护垫)'}),
-    P('lamp', .3, 1.45, 0, {c:'#efe6d2', name:'落地灯(朝斜顶打光)'}),
+    ...workCorner(P, olive, oak),
+    P('lamp', 1.15, 2.2, 0, {c:'#efe6d2', name:'落地灯(朝斜顶打光)'}),
     // 洋室 — low sofa facing the west window; low pieces make the 勾配天井 feel higher
-    P('recliner', 1.9, 1.45, 180, {c:olive, name:'你的单人沙发(面朝西窗, 虚影=弹出空间)'}),
+    P('frame', 3.575, .3, 90, {w:.3, h:.4, y:1.45, c:'#6f7a52', name:'梯子边小画(石膏板钉)'}),
+    P('frame', 3.575, .3, 90, {w:.3, h:.4, y:.95, c:'#b8902f', name:'梯子边小画(石膏板钉)'}),
     P('lowTable', 1.15, 1.6, 0, {w:.45, d:.45, h:.4, c:walnut, name:'边几'}),
     myCabinet(P),
     P('rug', 1.7, .9, 0, {w:1.6, d:1.2, c:'#cfc4b0', name:'地毯 160×120'}),
@@ -1572,10 +1582,10 @@ function artistItems(){
   return [
     // 洋室 — full
     P('roundRug', 1.6, .95, 0, {w:1.6, d:1.6, c:'#2b3a55', name:'靛蓝圆地毯 Ø160'}),
-    P('recliner', 1.6, 1.4, 180, {c:ai, name:'你的单人沙发(套靛蓝沙发罩, 面朝发光的西窗)'}),
-    P('lowTable', .85, 1.4, 0, {w:.45, d:.45, h:.4, c:red, name:'朱漆边几'}),
-    myCabinet(P), ...deskNook(P),
-    P('shelf', .2, .95, 270, {w:1.5, d:.3, h:.8, c:'#3a2a20', name:'矮书架 150(书、器物)'}),
+    ...workCorner(P, ai, '#3a2a20'),
+    P('wallPanel', 3.585, .915, 90, {w:1.73, h:2.8, c:'#1f2b44', name:'梯子墙 · 靛蓝可撕墙纸'}),
+    P('lowTable', 1.15, 1.5, 0, {w:.45, d:.45, h:.4, c:red, name:'朱漆边几'}),
+    myCabinet(P),
     P('paperLamp', 1.6, .95, 0, {y:1.7, w:.8, d:.8, h:.8, name:'大和纸灯 Ø80(从屋脊垂下)'}),
     P('banner', 1.6, 1.36, 0, {y:1.5, w:1.1, h:1.7, c:'#2b3a55', name:'靛染长布(系在阁楼栏杆上垂下)'}),
     P('plant', 2.6, .3, 0, {w:.5, d:.5, h:1.9, c:'#5a6b48', name:'一大枝枝条(插在陶罐里)'}),
@@ -1598,13 +1608,14 @@ function photoItems(){
   const sheer = '#f1ece2';
   return [
     // 洋室 — the first frame you see through the kitchen door: one chair and a lamp against the grey wall
-    P('recliner', .525, 2.2, 270, {c:'#6b4a33', name:'你的单人沙发(进门第一眼的主角, 脚托朝屋里弹出)'}),
-    myCabinet(P), ...deskNook(P),
-    P('lamp', .25, 1.55, 0, {h:1.5, name:'落地灯 2700K'}),
-    P('sofa2', 2.6, 1.3, 90, {w:1.3, d:.8, h:.65, c:'#8c8a85', name:'低背沙发(西窗光从侧面打来)'}),
+    ...workCorner(P, '#6b4a33', '#1e1e1e'),
+    P('uplight', 3.3, 1.2, 0, {name:'梯子下的上照灯(踏板影子投到墙和斜顶上)'}),
+    P('photo', 3.575, .3, 90, {w:.3, h:.4, y:1.25, c:'#4a4a4a', name:'梯子边一张小照片'}),
+    myCabinet(P),
+    P('lamp', 1.15, 2.05, 0, {h:1.5, name:'落地灯 2700K(光从侧面扫过柜门)'}),
     P('rug', 1.65, 1.3, 90, {w:1.6, d:1.2, c:'#b9b2a6', name:'暖灰地毯'}),
-    P('lowTable', 1.6, 1.3, 0, {w:.9, d:.5, h:.33, c:'#1e1e1e', name:'哑光黑矮几'}),
-    P('paperLamp', 1.6, 1.3, 0, {y:1.45, w:.4, d:.4, h:.3, name:'低吊灯(只照亮桌面)'}),
+    P('lowTable', 1.2, 1.4, 0, {w:.5, d:.5, h:.4, c:'#1e1e1e', name:'哑光黑边几'}),
+    P('paperLamp', 1.2, 1.4, 0, {y:1.45, w:.4, d:.4, h:.3, name:'低吊灯(只照亮边几)'}),
     P('uplight', 2.6, .35, 0, {name:'地面上照灯(打亮斜顶和原木梁)'}),
     P('curtain', 1.83, .17, 0, {w:1.95, h:1.7, y:.3, c:sheer, name:'亚麻纱帘(夜里用)'}),
     P('curtain', .17, .89, 90, {w:1.85, h:1.3, y:.7, c:sheer, name:'亚麻纱帘'}),
@@ -1901,9 +1912,9 @@ function renderDecor(){
       '<div class="swatches">' + tints.map(c => '<button type="button" class="sw" data-tint="' + c + '" style="background:' + c + '" aria-label="地面颜色 ' + c + '" aria-pressed="' + (c === r.fc) + '"></button>').join('') + '</div></div>';
   }
   h += '</section><section><h2>采光</h2><div class="fields two">' +
-    '<label class="f">时间 <span class="meta" id="d-hour-v">' + fmtHour(S.hour) + '</span><input type="range" id="d-hour" min="6" max="18" step="0.25" value="' + S.hour + '"></label>' +
+    '<label class="f">时间 <span class="meta" id="d-hour-v">' + fmtHour(S.hour) + '</span><input type="range" id="d-hour" min="6" max="22" step="0.25" value="' + S.hour + '"></label>' +
     '<label class="f">北方朝向<select id="d-north">' + [[0, '平面图上方'], [90, '平面图右方'], [180, '平面图下方'], [270, '平面图左方'], [45, '右上'], [135, '右下'], [225, '左下'], [315, '左上']].map(([v, n]) => '<option value="' + v + '"' + (v === S.northDeg ? ' selected' : '') + '>' + n + '</option>').join('') + '</select></label></div>' +
-    '<p class="hint">把北方设对，阳光从窗户照进来的方向就和实际一致。SUUMO 的「向き」写的是主窗朝向，比如「南」就是阳台朝南。</p></section>';
+    '<p class="hint">时间拖到 18:00 以后是夜晚：天光消失，只剩你放的落地灯、纸灯、灯带和上照灯。把北方设对，阳光从窗户照进来的方向就和实际一致。SUUMO 的「向き」写的是主窗朝向，比如「南」就是阳台朝南。</p></section>';
   p.innerHTML = h;
   const setWall = c => { S.wallColor = c; if (wallMat) wallMat.color.copy(lin(c)); };
   p.querySelectorAll('[data-wall]').forEach(b => b.addEventListener('click', () => { setWall(b.dataset.wall); commit(); renderDecor(); }));
