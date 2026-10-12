@@ -247,6 +247,9 @@ const ITEMS = {
   paperLamp:{n:'和纸灯',jp:'和紙ランプ',cat:'decor',w:.55,d:.55,h:.9,c:'#f3eee4',b:'paperLamp',soft:1},
   banner:{n:'挂布',jp:'タペストリー',cat:'decor',w:1.2,d:.02,h:1.8,c:'#2b3a55',b:'banner',soft:1,inWall:1},
   uplight:{n:'地面上照灯',jp:'アッパーライト',cat:'decor',w:.2,d:.2,h:.25,c:'#2a2a2a',b:'uplight',soft:1},
+  recliner:{n:'单人沙发(机械可弹出)',jp:'リクライナー',cat:'living',w:.85,d:.95,h:1.0,c:'#6e6a62',b:'recliner'},
+  monitor:{n:'显示器',jp:'モニター',cat:'living',w:.6,d:.2,h:.45,c:'#1c1c1c',b:'tv'},
+  ledBar:{n:'灯带(贴在天袋底下)',jp:'LEDバー',cat:'decor',w:.8,d:.04,h:.02,c:'#f4f4f2',b:'ledBar',soft:1,inWall:1},
   loungeChair:{n:'单人休闲椅',jp:'ラウンジチェア',cat:'living',w:.7,d:.75,h:.75,c:'#6b4a33',b:'loungeChair'},
   chabudai:{n:'矮圆桌',jp:'ちゃぶ台',cat:'art',w:.75,d:.75,h:.33,c:'#6b4a33',b:'chabudai'},
   zabuton:{n:'坐垫',jp:'座布団',cat:'art',w:.55,d:.59,h:.08,c:'#2f3e55',b:'zabuton',soft:1},
@@ -263,7 +266,7 @@ const ITEMS = {
   ac:{n:'空调',jp:'エアコン',cat:'fixed',w:.8,d:.25,h:.28,c:'#f4f4f2',b:'ac',fixed:1},
   tenbukuro:{n:'天袋(吊柜)',jp:'天袋',cat:'fixed',w:1.7,d:.86,h:.55,c:'#d9c6a5',b:'wardrobe',fixed:1},
   loft:{n:'阁楼 ロフト',jp:'ロフト',cat:'fixed',w:3.54,d:1.25,h:.9,c:'#b58a5e',b:'loft',fixed:1,soft:1},
-  ladder:{n:'阁楼梯子',jp:'はしご',cat:'fixed',w:.5,d:1.3,h:2.4,c:'#a8743f',b:'ladder',fixed:1},
+  ladder:{n:'阁楼梯子',jp:'はしご',cat:'fixed',w:.5,d:1.3,h:2.4,c:'#a8743f',b:'ladder',fixed:1,soft:1},
   beam:{n:'原木装饰梁',jp:'梁',cat:'fixed',w:.2,d:1.45,h:.2,c:'#8a5a35',b:'beam',fixed:1,soft:1,inWall:1},
   person:{n:'参照小人',jp:'身高可改',cat:'decor',w:.45,d:.25,h:1.7,c:'#4a6a8a',b:'person',soft:1}
 };
@@ -1197,6 +1200,17 @@ const BUILD = {
     const cone = new THREE.Mesh(new THREE.ConeGeometry(.55, 1.8, 24, 1, true), new THREE.MeshBasicMaterial({color:lin('#fff1cf'), transparent:true, opacity:.07, depthWrite:false, side:THREE.DoubleSide}));
     cone.rotation.x = Math.PI; cone.position.y = h + .9; cone.renderOrder = 3; g.add(cone);
   },
+  recliner(g, w, d, h, c){
+    // mechanical recliner: the pale ghost in front is the footrest when it pops out — keep that space clear
+    const aw = .14, ghost = {transparent:true, opacity:.22, depthWrite:false};
+    bx(g, w - .02, .38, d * .82, shade(c, -.1), 0, 0, .02);
+    bx(g, w - 2 * aw, .14, d * .7, c, 0, .38, .08, {roughness:1});
+    const back = bx(g, w - 2 * aw, h - .45, .26, c, 0, .45, -d / 2 + .14, {roughness:1}); back.rotation.x = -.12;
+    for (const sd of [-1, 1]) bx(g, aw, .62, d * .86, shade(c, -.05), sd * (w / 2 - aw / 2), 0, .02, {roughness:1});
+    bx(g, w - 2 * aw - .04, .1, .62, c, 0, .32, d / 2 + .31, ghost);
+    bx(g, w - 2 * aw - .04, .32, .05, c, 0, 0, d / 2 + .6, ghost);
+  },
+  ledBar(g, w, d, h, c){ const m = bx(g, w, h, d, c, 0, 0, 0, {emissive:lin('#fff4dc'), emissiveIntensity:1}); m.userData.lampGlow = true; },
   loungeChair(g, w, d, h, c){
     const cush = '#cbc3b5';
     for (const sd of [-1, 1]){ bx(g, .05, .55, d * .9, c, sd * (w / 2 - .025), 0, 0); bx(g, .06, .04, d * .9, c, sd * (w / 2 - .03), .55, 0); }
@@ -1510,6 +1524,15 @@ const numIn = (k, label, val, opt) => '<label class="f' + (opt && opt.wide ? ' w
 /* ---------- designer's plan: 和室 as the bedroom, 洋室 as living room + workspace ----------
    Low furniture under the 洋室's sloped ceiling, warm mid-tone wood to match the existing trims,
    linen and indigo textiles. Every piece keeps the paths, door swings and the ladder foot clear. */
+/* the viewer's own cabinet fits under the upper half of the loft ladder (≥1.2 m clear there) */
+const myCabinet = P => P('chest', 3.38, 1.52, 90, {w:.6, d:.42, h:1.1, c:'#8a6a4a', name:'你的柜子(梯子下, 尺寸待确认)'});
+/* a computer nook in the passage under the 天袋: desk against the south wall, LED bar under the cabinet as a task light */
+const deskNook = P => [
+  P('desk', .325, 3.165, 270, {w:.84, d:.55, c:'#a87b50', name:'电脑桌 84×55(天袋下的工作角)'}),
+  P('monitor', .2, 3.165, 270, {y:.72, name:'显示器'}),
+  P('officeChair', .87, 3.165, 90, {w:.5, d:.5, c:'#2a2a2a', name:'办公椅(不用时推进桌下)'}),
+  P('ledBar', .35, 3.165, 270, {y:1.82, w:.8, name:'灯带(天袋底下当台灯)'})
+];
 function designItems(){
   const P = (t, x, z, rot, extra) => Object.assign(I(t, x, z, rot), {locked:false}, extra || {});
   const oak = '#a87b50', walnut = '#6b4a33', linen = '#e3d9c8', indigo = '#2f3e55', olive = '#5f6b4d';
@@ -1519,8 +1542,9 @@ function designItems(){
     P('officeChair', .93, .6, 90, {c:'#2a2a2a', name:'办公椅(下垫地板保护垫)'}),
     P('lamp', .3, 1.45, 0, {c:'#efe6d2', name:'落地灯(朝斜顶打光)'}),
     // 洋室 — low sofa facing the west window; low pieces make the 勾配天井 feel higher
-    P('sofa2', 1.6, 1.5, 180, {w:1.4, d:.8, h:.65, c:olive, name:'低背双人沙发 140'}),
-    P('lowTable', 1.75, .65, 0, {w:.9, d:.45, h:.35, c:walnut, name:'矮茶几 90×45'}),
+    P('recliner', 1.9, 1.45, 180, {c:olive, name:'你的单人沙发(面朝西窗, 虚影=弹出空间)'}),
+    P('lowTable', 1.15, 1.6, 0, {w:.45, d:.45, h:.4, c:walnut, name:'边几'}),
+    myCabinet(P),
     P('rug', 1.7, .9, 0, {w:1.6, d:1.2, c:'#cfc4b0', name:'地毯 160×120'}),
     P('plant', 2.55, .3, 0, {h:1.1, name:'绿植'}),
     P('curtain', 1.83, .17, 0, {w:1.95, h:1.7, y:.3, c:linen, name:'窗帘 西大窗(遮光+纱帘)'}),
@@ -1548,8 +1572,9 @@ function artistItems(){
   return [
     // 洋室 — full
     P('roundRug', 1.6, .95, 0, {w:1.6, d:1.6, c:'#2b3a55', name:'靛蓝圆地毯 Ø160'}),
-    P('sofa3', 1.6, 1.45, 180, {w:2.0, d:.9, h:.55, c:ai, name:'大低床榻 200×90(靛蓝, 当沙发也当客床)'}),
-    P('lowTable', 1.6, .55, 0, {w:.7, d:.4, h:.3, c:red, name:'朱漆矮几'}),
+    P('recliner', 1.6, 1.4, 180, {c:ai, name:'你的单人沙发(套靛蓝沙发罩, 面朝发光的西窗)'}),
+    P('lowTable', .85, 1.4, 0, {w:.45, d:.45, h:.4, c:red, name:'朱漆边几'}),
+    myCabinet(P), ...deskNook(P),
     P('shelf', .2, .95, 270, {w:1.5, d:.3, h:.8, c:'#3a2a20', name:'矮书架 150(书、器物)'}),
     P('paperLamp', 1.6, .95, 0, {y:1.7, w:.8, d:.8, h:.8, name:'大和纸灯 Ø80(从屋脊垂下)'}),
     P('banner', 1.6, 1.36, 0, {y:1.5, w:1.1, h:1.7, c:'#2b3a55', name:'靛染长布(系在阁楼栏杆上垂下)'}),
@@ -1573,7 +1598,8 @@ function photoItems(){
   const sheer = '#f1ece2';
   return [
     // 洋室 — the first frame you see through the kitchen door: one chair and a lamp against the grey wall
-    P('loungeChair', .425, 2.2, 270, {name:'单人休闲椅(进门第一眼的主角)'}),
+    P('recliner', .525, 2.2, 270, {c:'#6b4a33', name:'你的单人沙发(进门第一眼的主角, 脚托朝屋里弹出)'}),
+    myCabinet(P), ...deskNook(P),
     P('lamp', .25, 1.55, 0, {h:1.5, name:'落地灯 2700K'}),
     P('sofa2', 2.6, 1.3, 90, {w:1.3, d:.8, h:.65, c:'#8c8a85', name:'低背沙发(西窗光从侧面打来)'}),
     P('rug', 1.65, 1.3, 90, {w:1.6, d:1.2, c:'#b9b2a6', name:'暖灰地毯'}),
