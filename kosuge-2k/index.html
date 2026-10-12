@@ -250,6 +250,7 @@ const ITEMS = {
   uplight:{n:'地面上照灯',jp:'アッパーライト',cat:'decor',w:.2,d:.2,h:.25,c:'#2a2a2a',b:'uplight',soft:1},
   recliner:{n:'单人沙发(机械可弹出)',jp:'リクライナー',cat:'living',w:.85,d:.95,h:1.0,c:'#6e6a62',b:'recliner'},
   monitor:{n:'显示器',jp:'モニター',cat:'living',w:.6,d:.2,h:.45,c:'#1c1c1c',b:'tv'},
+  windowSeat:{n:'窗边长榻',jp:'ウィンドウベンチ',cat:'living',w:1.4,d:.5,h:.42,c:'#a87b50',b:'windowSeat'},
   deck:{n:'木地板拼块',jp:'ウッドパネル',cat:'decor',w:.8,d:1.2,h:.03,c:'#9a7b5a',b:'deck',soft:1},
   pole:{n:'晾衣杆',jp:'物干し竿',cat:'decor',w:.06,d:2.4,h:.05,c:'#c9cdd0',b:'pole',soft:1},
   wallPanel:{n:'墙布/可撕墙纸',jp:'はがせる壁紙',cat:'decor',w:1.0,d:.006,h:2.4,c:'#24314a',b:'wallPanel',soft:1,inWall:1},
@@ -1274,6 +1275,12 @@ const BUILD = {
     bx(g, w - 2 * aw - .04, seat - .14, .04, c, 0, 0, d / 2 + foot - .02, ghost);
     const rb = bx(g, w - 2 * aw, h - seat, .06, c, 0, seat - .02, -d / 2 + .1, ghost); rb.rotation.x = -.55;
   },
+  windowSeat(g, w, d, h, c){
+    bx(g, w, h - .08, d, c, 0, 0, 0);
+    bx(g, w - .02, .08, d - .02, '#d9cfbd', 0, h - .08, 0, {roughness:1});
+    const n = Math.max(1, Math.floor(w / .5));
+    for (let i = 0; i < n; i++){ const pl = bx(g, .4, .38, .12, ['#2f3e55', '#c9b48a', '#8c8a85'][i % 3], -w / 2 + (i + .5) * w / n, h - .02, -d / 2 + .1, {roughness:1}); pl.rotation.x = -.2; }
+  },
   deck(g, w, d, h, c){
     const n = Math.max(2, Math.round(w / .09));
     for (let i = 0; i < n; i++) bx(g, w / n - .008, h, d, shade(c, i % 2 ? -.05 : .04), -w / 2 + (i + .5) * w / n, 0, 0, {roughness:.9});
@@ -1632,6 +1639,77 @@ const loftItems = P => [
   P('box', 1.72, 2.35, 0, {w:.74, d:.44, h:.3, y:2.5, c:'#ecebe6', name:'阁楼 · 衣装ケース(换季衣物)'}),
   P('box', 2.6, 2.33, 0, {w:.7, d:.5, h:.4, y:2.5, c:'#d6d0c2', name:'阁楼 · 冬被/客用布団(收纳袋)'})
 ];
+/* the photo wall under the loft ladder, lit from below by an uplight, plus prints hanging from the ladder */
+const ladderGallery = P => [
+    P('uplight', 3.3, 1.2, 0, {name:'梯子下的上照灯(踏板影子投到墙和斜顶上)'}),
+    // the wall under the ladder: nobody brushes it, the uplight washes it, the treads stripe it with shadow
+    P('photo', 3.575, 1.025, 90, {w:.25, h:.30, mat:.06, y:.19, c:'#505050', name:'梯下照片 2L 12.7×17.8 · 框25×30'}),
+    P('photo', 3.575, 1.325, 90, {w:.25, h:.30, mat:.06, y:.75, c:'#5a5a5a', name:'梯下照片 2L 12.7×17.8 · 框25×30'}),
+    P('photo', 3.575, 1.58, 90, {w:.32, h:.37, mat:.06, y:1.08, c:'#464646', name:'梯下照片 六切 20.3×25.4 · 框32×37'}),
+    P('photo', 3.575, 1.53, 90, {w:.42, h:.54, mat:.06, y:.18, c:'#3c3c3c', name:'梯下照片 A3 29.7×42 · 框42×54'}),
+    P('photo', 3.575, .27, 90, {w:.38, h:.50, mat:.04, y:1.2, c:'#4a4a4a', name:'梯脚旁 A3 竖 · 框38×50(亚克力, 不用玻璃)'}),
+    // on the ladder: bare prints on threads from the room-side rail, floating in front of the wall frames
+    P('photo', 3.06, 1.0, 90, {w:.127, h:.178, bare:true, y:.52, c:'#555555', name:'梯上挂的照片 2L(细线+夹子)'}),
+    P('photo', 3.06, 1.3, 90, {w:.127, h:.178, bare:true, y:1.07, c:'#606060', name:'梯上挂的照片 2L(细线+夹子)'}),
+    P('photo', 3.06, 1.62, 90, {w:.127, h:.178, bare:true, y:1.66, c:'#4c4c4c', name:'梯上挂的照片 2L(细线+夹子)'})
+];
+/* the cabinet slots under the 天袋 (180 cm cabinet, ~185 cm clearance), against the passage's south wall */
+const nookCabinet = P => P('wardrobe', .235, 3.15, 270, {w:.8, d:.37, h:1.8, c:'#8a6a4a', name:'你的柜子 80×37×180(嵌在天袋下, 像内置柜)'});
+const kitchenItems = P => [
+  P('fridge', 4.96, 2.62, 90, {w:.5, d:.6, h:1.2, name:'冰箱 2门约150L(高≤120)'}),
+  P('microwave', 4.96, 2.62, 90, {y:1.2}), P('stove', 4.95, 1.95, 90, {y:.85})
+];
+/* 公私分明: the 洋室 by the kitchen is the public living room facing the ladder photo wall;
+   the 和室 at the back holds everything private — work and sleep. */
+function swapItems(){
+  const P = (t, x, z, rot, extra) => Object.assign(I(t, x, z, rot), {locked:false}, extra || {});
+  const linen = '#e3d9c8';
+  return [
+    nookCabinet(P),
+    P('sofa3', .475, 1.0, 270, {w:1.8, d:.85, h:.6, c:'#8c8a85', name:'低沙发 180(背靠南窗, 面朝梯子照片墙)'}),
+    P('lowTable', 1.35, 1.0, 90, {w:1.0, d:.55, h:.38, c:'#6b4a33', name:'矮茶几 100×55(也当饭桌)'}),
+    P('zabuton', 1.95, .75, 90, {c:'#2f3e55'}), P('zabuton', 1.95, 1.25, 90, {c:'#c9b48a'}),
+    P('rug', 1.2, 1.0, 0, {w:2.2, d:1.6, c:'#cfc4b0', name:'地毯 220×160'}),
+    P('lamp', .3, 2.1, 0, {h:1.5, name:'落地灯 2700K'}),
+    P('plant', .3, 2.45, 0, {w:.35, d:.35, h:1.4, name:'绿植'}),
+    ...ladderGallery(P),
+    P('curtain', 1.83, .17, 0, {w:1.95, h:1.7, y:.3, c:linen, name:'西大窗 亚麻窗帘'}),
+    P('curtain', .17, .89, 90, {w:1.85, h:1.2, y:.8, c:linen, name:'南腰窗 窗帘(到窗台)'}),
+    // 和室: desk on the north wall, east window to your right; a mat under the chair protects the tatami
+    P('rug', 2.86, 4.42, 0, {w:1.45, d:1.3, c:'#b9b2a6', name:'椅子下的地垫(保护榻榻米)'}),
+    P('desk', 3.35, 4.42, 90, {w:1.14, d:.48, h:.75, c:'#a87b50', name:'你的电脑桌 114×48×75'}),
+    P('monitor', 3.46, 4.42, 90, {y:.75, name:'显示器'}),
+    P('recliner', 2.66, 4.42, 270, {w:.78, d:.70, h:.90, seat:.40, foot:.50, c:'#6b4a33', name:'你的单人沙发 78×70 座高40 背高90(虚影=脚托/后仰)'}),
+    P('lowTable', 2.66, 5.08, 0, {w:.4, d:.4, h:.45, c:'#6b4a33', name:'边几(沙发旁)'}),
+    P('futon', 1.55, 5.8, 270, {w:1.0, d:2.1, h:.12, c:'#d9d4ca', name:'布団 100×210(头朝南, 早上叠进衣柜)'}),
+    P('paperLamp', .3, 5.8, 0, {w:.28, d:.28, h:.5, name:'行灯(枕边的小纸灯)'}),
+    P('plant', 2.85, 6.05, 0, {w:.35, d:.35, h:.9, name:'绿植'}),
+    P('curtain', .17, 4.545, 90, {w:1.9, h:1.6, y:.3, c:'#d8cfbf', name:'阳台窗 遮光窗帘'}),
+    P('curtain', 1.82, 6.2, 0, {w:1.85, h:1.6, y:.3, c:'#d8cfbf', name:'东窗 遮光窗帘'}),
+    ...balconyItems(P), ...loftItems(P), ...kitchenItems(P)
+  ];
+}
+/* 一条窗边线: everything that wants daylight lines up under the big west window — the desk, then a low
+   window seat — and the rest of the 洋室 stays open. The 和室 is only for sleep and slow mornings. */
+function lineItems(){
+  const P = (t, x, z, rot, extra) => Object.assign(I(t, x, z, rot), {locked:false}, extra || {});
+  return [
+    ...workCorner(P, '#6b4a33', '#a87b50'),
+    P('windowSeat', 1.96, .3, 0, {w:1.42, d:.5, h:.42, name:'窗边长榻 142×50 高42(在窗台下, 当沙发)'}),
+    nookCabinet(P),
+    P('rug', 2.0, 1.45, 0, {w:1.6, d:1.2, c:'#cfc4b0', name:'地毯 160×120'}),
+    P('lamp', .3, 2.1, 0, {h:1.5, name:'落地灯 2700K'}),
+    P('plant', .3, 2.45, 0, {w:.35, d:.35, h:1.4, name:'绿植'}),
+    ...ladderGallery(P),
+    P('curtain', .17, .89, 90, {w:1.85, h:1.2, y:.8, c:'#e3d9c8', name:'南腰窗 窗帘(到窗台)'}),
+    ...waRoom(P, '#d9d4ca'),
+    P('chabudai', 2.1, 5.85, 0, {w:.6, d:.6, h:.33, name:'矮圆桌(东窗边喝茶)'}),
+    P('zabuton', 2.65, 5.85, 270, {c:'#2f3e55'}),
+    P('curtain', .17, 4.545, 90, {w:1.9, h:1.6, y:.3, c:'#d8cfbf', name:'阳台窗 遮光窗帘'}),
+    P('curtain', 1.82, 6.2, 0, {w:1.85, h:1.6, y:.3, c:'#d8cfbf', name:'东窗 遮光窗帘'}),
+    ...balconyItems(P), ...loftItems(P), ...kitchenItems(P)
+  ];
+}
 function designItems(){
   const P = (t, x, z, rot, extra) => Object.assign(I(t, x, z, rot), {locked:false}, extra || {});
   const oak = '#a87b50', walnut = '#6b4a33', linen = '#e3d9c8', indigo = '#2f3e55', olive = '#5f6b4d';
@@ -1697,17 +1775,7 @@ function photoItems(){
   return [
     // 洋室 — the first frame you see through the kitchen door: one chair and a lamp against the grey wall
     ...workCorner(P, '#6b4a33', '#1e1e1e'),
-    P('uplight', 3.3, 1.2, 0, {name:'梯子下的上照灯(踏板影子投到墙和斜顶上)'}),
-    // the wall under the ladder: nobody brushes it, the uplight washes it, the treads stripe it with shadow
-    P('photo', 3.575, 1.025, 90, {w:.25, h:.30, mat:.06, y:.19, c:'#505050', name:'梯下照片 2L 12.7×17.8 · 框25×30'}),
-    P('photo', 3.575, 1.325, 90, {w:.25, h:.30, mat:.06, y:.75, c:'#5a5a5a', name:'梯下照片 2L 12.7×17.8 · 框25×30'}),
-    P('photo', 3.575, 1.58, 90, {w:.32, h:.37, mat:.06, y:1.08, c:'#464646', name:'梯下照片 六切 20.3×25.4 · 框32×37'}),
-    P('photo', 3.575, 1.53, 90, {w:.42, h:.54, mat:.06, y:.18, c:'#3c3c3c', name:'梯下照片 A3 29.7×42 · 框42×54'}),
-    P('photo', 3.575, .27, 90, {w:.38, h:.50, mat:.04, y:1.2, c:'#4a4a4a', name:'梯脚旁 A3 竖 · 框38×50(亚克力, 不用玻璃)'}),
-    // on the ladder: bare prints on threads from the room-side rail, floating in front of the wall frames
-    P('photo', 3.06, 1.0, 90, {w:.127, h:.178, bare:true, y:.52, c:'#555555', name:'梯上挂的照片 2L(细线+夹子)'}),
-    P('photo', 3.06, 1.3, 90, {w:.127, h:.178, bare:true, y:1.07, c:'#606060', name:'梯上挂的照片 2L(细线+夹子)'}),
-    P('photo', 3.06, 1.62, 90, {w:.127, h:.178, bare:true, y:1.66, c:'#4c4c4c', name:'梯上挂的照片 2L(细线+夹子)'}),
+    ...ladderGallery(P),
     // the curtain under the 天袋: evening photo on the 洋室 side, morning photo on the 和室 side
     P('noren', .91, 2.73, 180, {y:.03, name:'双面照片门帘 2片×86×178(正面洋室·背面和室)'}),
     myCabinet(P),
@@ -1734,6 +1802,8 @@ function photoItems(){
 const SCHEMES = {
   designer:{n:'居住设计师', d:'和室卧室，洋室起居+工作。低矮家具，木色+亚麻+靛蓝。', wall:'#e6d8c3', items:designItems, person:[2.7, .95, 90]},
   artist:{n:'艺术家 · 满与空', d:'两间房做成一组对照：洋室浸在靛蓝里，饱满；和室几乎清空，只留「间」。门帘的朱红取自厨房那块旧红地板。', wall:'#efebe3', items:artistItems, person:[3.25, 2.3, 121]},
+  swap:{n:'公私分明', d:'洋室挨着厨房，做成待客的客厅：低沙发背靠南窗，面朝梯子照片墙。工作和睡觉都放进最里面的和室。你的柜子嵌在天袋下面。', wall:'#e6d8c3', items:swapItems, person:[3.35, 2.25, 90], spot:'none'},
+  line:{n:'一条窗边线', d:'需要光的东西沿西大窗排成一条：电脑桌，接着一张窗边长榻当沙发。洋室中间完全空出来。柜子嵌在天袋下，和室只用来睡觉和慢慢吃早餐。', wall:'#e6d8c3', items:lineItems, person:[3.1, 2.2, 135]},
   photo:{n:'摄影师 · 光的房子', d:'窗全是磨砂玻璃，只进光不看景。生活跟着光走：东窗叫醒你，西窗送走一天。墙保留原来的米色壁纸，每条视线尽头只放一件主角。', wall:'#e6d8c3', items:photoItems, person:[3.35, 2.25, 90]}
 };
 /* the computer corner can sit by the windows (south-west corner) or beside the loft ladder */
@@ -1756,7 +1826,7 @@ function applyScheme(key){
   const person = S.items.find(i => i.t === 'person');
   if (person) Object.assign(person, {x:sc.person[0], z:sc.person[1], rot:sc.person[2]});
   S.items = keep.concat(person ? [person] : [], sc.items());
-  S.wallColor = sc.wall; S.deskSpot = 'window';
+  S.wallColor = sc.wall; S.deskSpot = sc.spot || 'window';
   selId = null; rebuildStructure(); buildFurniture(); checkProblems(); commit(); drawSelHelpers(); renderFurn();
   showTip('已载入「' + sc.n + '」· 不满意点「撤销」', 4000);
 }
