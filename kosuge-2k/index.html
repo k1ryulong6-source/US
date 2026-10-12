@@ -241,7 +241,8 @@ const ITEMS = {
   lamp:{n:'落地灯',jp:'フロアライト',cat:'decor',w:.35,d:.35,h:1.6,c:'#efe6d2',b:'lamp'},
   curtain:{n:'窗帘',jp:'カーテン',cat:'decor',w:1.8,d:.08,h:1.95,c:'#d8d2c4',b:'curtain',soft:1,inWall:1},
   frame:{n:'挂画',jp:'絵',cat:'art',w:.9,d:.03,h:.7,c:'#c4532d',b:'frame',inWall:1},
-  photo:{n:'相片(白卡框)',jp:'写真',cat:'art',w:.5,d:.03,h:.6,c:'#777777',b:'photo',inWall:1},
+  photo:{n:'相片(卡纸框)',jp:'写真',cat:'art',w:.42,d:.03,h:.54,c:'#777777',b:'photo',inWall:1},
+  noren:{n:'双面印照片门帘',jp:'両面のれん',cat:'art',w:1.72,d:.03,h:1.78,c:'#2a2a2a',b:'noren',soft:1,inWall:1},
   spot:{n:'夹灯(夹在長押上)',jp:'クリップライト',cat:'art',w:.1,d:.15,h:.15,c:'#1e1e1e',b:'spot',soft:1,inWall:1},
   roundRug:{n:'圆地毯',jp:'ラウンドラグ',cat:'decor',w:1.6,d:1.6,h:.01,c:'#2b3a55',b:'roundRug',soft:1},
   paperLamp:{n:'和纸灯',jp:'和紙ランプ',cat:'decor',w:.55,d:.55,h:.9,c:'#f3eee4',b:'paperLamp',soft:1},
@@ -283,6 +284,7 @@ const FLOORS = {
 };
 const ROOM_TYPES = {room:'居室',entry:'玄关',wet:'水回り',storage:'收纳',stair:'楼梯',balcony:'阳台(矮墙)'};
 const OPEN_TYPES = {door:'平开门',double:'对开门',sliding:'推拉门',fold:'折叠门',window:'窗',opening:'门洞'};
+const PRINT_SIZES = [['L', 8.9, 12.7], ['2L', 12.7, 17.8], ['六切', 20.3, 25.4], ['四切', 25.4, 30.5], ['A4', 21, 29.7], ['A3', 29.7, 42], ['半切', 35.6, 43.2], ['A2', 42, 59.4], ['A1', 59.4, 84.1]];
 const FURN_COLORS = ['#eceae4','#d8d2c4','#c8a77e','#9a6b4f','#6b4a33','#2a2a2a','#8b8f8c','#cdbfa6','#6f8f6a','#2f3e55','#b5603f','#e3c46a'];
 const FLOOR_TINTS = {stairs:['#a9825a','#c8a77e'],wood:['#d9bf95','#b58a5e','#8a5f3c','#5b3d29','#c9c3b8'],tatami:['#c5bf86','#d4c890','#b3b07a'],cf:['#e3ddd2','#cfd2d0','#b9a48a'],tile:['#d0cdc6','#9a9993','#ece9e2'],carpet:['#8f8a7e','#5f6a73','#b7a68c'],bath:['#d6dadb'],concrete:['#a7a8a3']};
 const WALL_COLORS = ['#e6d8c3','#efe7da','#f1efe9','#ffffff','#e6e2d6','#dfe4e1','#d9d4cb','#c9d3cf','#e8d9cc','#cfd6e0'];
@@ -389,13 +391,23 @@ function migrate(o){
 }
 function valid(s){ return s && Array.isArray(s.rooms) && Array.isArray(s.openings) && Array.isArray(s.items); }
 let saveTimer = 0, saveNote = '已自动保存在本浏览器';
+/* the viewer's own photos, by key; items reference them as it.img / it.img2 */
+const IMG_KEY = LS_KEY + '-img';
+let IMG = {};
+try { IMG = JSON.parse(localStorage.getItem(IMG_KEY) || '{}') || {}; } catch(e){ IMG = {}; }
+function saveImgs(){
+  const used = new Set(); S.items.forEach(i => { if (i.img) used.add(i.img); if (i.img2) used.add(i.img2); });
+  for (const k of Object.keys(IMG)) if (!used.has(k)) delete IMG[k];
+  try { localStorage.setItem(IMG_KEY, JSON.stringify(IMG)); }
+  catch(e){ saveNote = '照片太多或太大，超出浏览器的保存上限：照片这次没存上，请删掉几张或用「导出」备份'; const el = $('#saveNote'); if (el) el.textContent = saveNote; }
+}
 function save(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     try { localStorage.setItem(LS_KEY, JSON.stringify(S)); saveNote = '已自动保存在本浏览器'; }
     catch(e){
       try { localStorage.setItem(LS_KEY, JSON.stringify(Object.assign({}, S, {underlay:null}))); saveNote = '底图太大，没能存进浏览器；其余已保存'; }
-      catch(e2){ saveNote = '这个浏览器不允许本地保存，请用「导出」备份'; }
+      catch(e2){ saveNote = '没能保存到这个浏览器（可能是隐私模式或空间已满），请用「导出」备份'; }
     }
     const el = $('#saveNote'); if (el) el.textContent = saveNote;
   }, 350);
@@ -1008,7 +1020,16 @@ function artTex(mode, color){
   const key = mode + color; if (artCache.has(key)) return artCache.get(key);
   const N = 256, c = document.createElement('canvas'); c.width = c.height = N; const g = c.getContext('2d');
   const rnd = mulberry(parseInt(color.slice(1), 16) + mode.length * 131);
-  if (mode === 'paint'){
+  if (mode === 'dusk' || mode === 'dawn'){
+    // colour landscape: the evening (warm) or the morning (cool) version of the same horizon
+    const dusk = mode === 'dusk', sky = g.createLinearGradient(0, 0, 0, N);
+    sky.addColorStop(0, dusk ? '#27365e' : '#a9c4dc'); sky.addColorStop(.58, dusk ? '#e98a55' : '#f4dcb8'); sky.addColorStop(.6, dusk ? '#3a2a2a' : '#8a9aa0'); sky.addColorStop(1, dusk ? '#140f12' : '#4d5b5e');
+    g.fillStyle = sky; g.fillRect(0, 0, N, N);
+    g.fillStyle = dusk ? 'rgba(255,214,150,.95)' : 'rgba(255,250,235,.9)'; g.beginPath(); g.arc(N * (dusk ? .68 : .3), N * .5, N * .06, 0, Math.PI * 2); g.fill();
+    g.fillStyle = dusk ? '#120c10' : '#3f4b4c'; g.beginPath(); g.moveTo(0, N);
+    for (let x = 0; x <= N; x += 8) g.lineTo(x, N * (.62 + .07 * Math.sin(x / 23) + .03 * Math.sin(x / 7)));
+    g.lineTo(N, N); g.fill();
+  } else if (mode === 'paint'){
     const pal = [color, '#e8dcc2', '#1f2430', '#c4532d', '#2f3e55', '#b8902f', '#6f7a52', '#f2eee6'];
     g.fillStyle = shade(color, -.25); g.fillRect(0, 0, N, N);
     for (let i = 0; i < 3; i++){
@@ -1032,6 +1053,19 @@ function artTex(mode, color){
   artCache.set(key, t); return t;
 }
 function addGlow(g, x, y, z, k){ const l = new THREE.PointLight(0xffdcae, k, 4.5, 2); l.position.set(x, y, z); g.add(l); }
+/* a texture from one of the viewer's photos, cropped to fill an area of aspect ta (w/h), centred.
+   half = 0 / 1 takes the left / right half of that area (for the two panels of a split curtain). */
+function userTex(key, ta, half){
+  const t = new THREE.TextureLoader().load(IMG[key], tx => {
+    const ia = tx.image.width / tx.image.height; let rx = 1, ry = 1;
+    if (ia > ta) rx = ta / ia; else ry = ia / ta;
+    tx.repeat.set(half == null ? rx : rx / 2, ry);
+    tx.offset.set((1 - rx) / 2 + (half == null ? 0 : half * rx / 2), (1 - ry) / 2);
+  });
+  t.encoding = THREE.sRGBEncoding; t.anisotropy = maxAniso; return t;
+}
+function halfTex(mode, half){ const t = artTex(mode, '#808080').clone(); t.needsUpdate = true; t.repeat.x = .5; t.offset.x = half * .5; return t; }
+let curItem = null;   // the item being built, for builders that need more than w/d/h/c
 const BUILD = {
   box(g, w, d, h, c){ bx(g, w, h, d, c, 0, 0, 0); },
   person(g, w, d, h, c){
@@ -1163,12 +1197,34 @@ const BUILD = {
     for (const y of [h * .62, h * .25]) for (const x of [-.012, .012]) bx(g, .006, .018, .004, '#555', x, y, d / 2);
   },
   frame(g, w, d, h, c){
+    const it = curItem || {};
     bx(g, w, h, d, '#1d1d1d', 0, 0, 0);
-    bx(g, w - .05, h - .05, .004, '#ffffff', 0, .025, d / 2, {map:artTex('paint', c), roughness:.9});
+    bx(g, w - .05, h - .05, .004, '#ffffff', 0, .025, d / 2, {map:it.img && IMG[it.img] ? userTex(it.img, (w - .05) / (h - .05)) : artTex('paint', c), roughness:.9});
   },
   photo(g, w, d, h, c){
-    bx(g, w, h, d, '#e9e6df', 0, 0, 0);
-    bx(g, w * .7, h * .6, .004, '#ffffff', 0, h * .25, d / 2, {map:artTex('photo', c), roughness:.6});
+    const it = curItem || {}, m = it.bare ? 0 : (it.mat != null ? it.mat : Math.min(w, h) * .15);
+    const pw = Math.max(.02, w - 2 * m), ph = Math.max(.02, h - 2 * m);
+    const map = it.img && IMG[it.img] ? userTex(it.img, pw / ph) : artTex('photo', c);
+    if (it.bare){
+      bx(g, pw, ph, .002, '#ffffff', 0, 0, 0, {map, roughness:.5});
+      bx(g, .03, .03, .012, '#c9b48a', 0, ph - .02, 0);
+      cyl(g, .0015, .0015, .1, '#dddddd', 0, ph, 0, 4);
+      return;
+    }
+    bx(g, w, h, d, '#1d1d1d', 0, 0, 0);
+    bx(g, w - .02, h - .02, .004, '#f4f2ec', 0, .01, d / 2);
+    bx(g, pw, ph, .004, '#ffffff', 0, m, d / 2 + .002, {map, roughness:.6});
+  },
+  noren(g, w, d, h, c){
+    // split curtain printed on both faces, three layers (print / blackout / print) so the sides don't show through
+    const it = curItem || {}, pw = w / 2 - .01, edge = new THREE.MeshStandardMaterial({color:lin(c), roughness:1});
+    for (let i = 0; i < 2; i++){
+      const front = new THREE.MeshStandardMaterial({roughness:1, map:it.img && IMG[it.img] ? userTex(it.img, w / h, i) : halfTex('dusk', i)});
+      const back = new THREE.MeshStandardMaterial({roughness:1, map:it.img2 && IMG[it.img2] ? userTex(it.img2, w / h, 1 - i) : halfTex('dawn', 1 - i)});
+      const m = new THREE.Mesh(new THREE.BoxGeometry(pw, h, .012), [edge, edge, edge, edge, front, back]);
+      m.position.set(-w / 4 + i * w / 2, h / 2, 0); m.castShadow = true; m.receiveShadow = true; g.add(m);
+    }
+    const rod = mk(new THREE.CylinderGeometry(.012, .012, w + .04, 10), '#c9cdd0', {metalness:.6, roughness:.3}); rod.rotation.z = Math.PI / 2; rod.position.y = h + .015; g.add(rod);
   },
   spot(g, w, d, h, c){
     bx(g, .04, .06, .05, '#333', 0, h - .06, -d / 2 + .025);
@@ -1282,7 +1338,7 @@ function buildItem(it){
   const old = itemObj.get(it.id); if (old){ gFurn.remove(old); disposeGroup(old); }
   const g = new THREE.Group(); const inner = new THREE.Group(); g.add(inner);
   const b = (ITEMS[it.t] || ITEMS.box).b;
-  (BUILD[b] || BUILD.box)(inner, it.w, it.d, it.h, it.c);
+  curItem = it; (BUILD[b] || BUILD.box)(inner, it.w, it.d, it.h, it.c); curItem = null;
   mergeStatic(inner);
   g.userData.itemId = it.id; itemObj.set(it.id, g); gFurn.add(g); placeItem(it); fadeOverhead(it);
   if (it.t === 'person' && view === 'walk') g.visible = false;
@@ -1610,7 +1666,18 @@ function photoItems(){
     // 洋室 — the first frame you see through the kitchen door: one chair and a lamp against the grey wall
     ...workCorner(P, '#6b4a33', '#1e1e1e'),
     P('uplight', 3.3, 1.2, 0, {name:'梯子下的上照灯(踏板影子投到墙和斜顶上)'}),
-    P('photo', 3.575, .3, 90, {w:.3, h:.4, y:1.25, c:'#4a4a4a', name:'梯子边一张小照片'}),
+    // the wall under the ladder: nobody brushes it, the uplight washes it, the treads stripe it with shadow
+    P('photo', 3.575, 1.025, 90, {w:.25, h:.30, mat:.06, y:.19, c:'#505050', name:'梯下照片 2L 12.7×17.8 · 框25×30'}),
+    P('photo', 3.575, 1.325, 90, {w:.25, h:.30, mat:.06, y:.75, c:'#5a5a5a', name:'梯下照片 2L 12.7×17.8 · 框25×30'}),
+    P('photo', 3.575, 1.58, 90, {w:.32, h:.37, mat:.06, y:1.08, c:'#464646', name:'梯下照片 六切 20.3×25.4 · 框32×37'}),
+    P('photo', 3.575, 1.53, 90, {w:.42, h:.54, mat:.06, y:.18, c:'#3c3c3c', name:'梯下照片 A3 29.7×42 · 框42×54'}),
+    P('photo', 3.575, .27, 90, {w:.38, h:.50, mat:.04, y:1.2, c:'#4a4a4a', name:'梯脚旁 A3 竖 · 框38×50(亚克力, 不用玻璃)'}),
+    // on the ladder: bare prints on threads from the room-side rail, floating in front of the wall frames
+    P('photo', 3.06, 1.0, 90, {w:.127, h:.178, bare:true, y:.52, c:'#555555', name:'梯上挂的照片 2L(细线+夹子)'}),
+    P('photo', 3.06, 1.3, 90, {w:.127, h:.178, bare:true, y:1.07, c:'#606060', name:'梯上挂的照片 2L(细线+夹子)'}),
+    P('photo', 3.06, 1.62, 90, {w:.127, h:.178, bare:true, y:1.66, c:'#4c4c4c', name:'梯上挂的照片 2L(细线+夹子)'}),
+    // the curtain under the 天袋: evening photo on the 洋室 side, morning photo on the 和室 side
+    P('noren', .91, 2.73, 180, {y:.03, name:'双面照片门帘 2片×86×178(正面洋室·背面和室)'}),
     myCabinet(P),
     P('lamp', 1.15, 2.05, 0, {h:1.5, name:'落地灯 2700K(光从侧面扫过柜门)'}),
     P('rug', 1.65, 1.3, 90, {w:1.6, d:1.2, c:'#b9b2a6', name:'暖灰地毯'}),
@@ -1702,6 +1769,7 @@ function renderFurn(){
       '<div class="fields two">' + numIn('rot', '角度 °(顺时针)', it.rot, {id:'f-rot', u:'deg', step:15}) +
       '<label class="f">颜色<input type="color" id="f-color" value="' + it.c + '"></label></div>' +
       '<div class="swatches" id="f-sw">' + FURN_COLORS.map(c => '<button type="button" class="sw" style="background:' + c + '" data-c="' + c + '" aria-label="颜色 ' + c + '" aria-pressed="' + (c === it.c) + '"></button>').join('') + '</div>' +
+      photoControls(it) +
       '<div class="row"><button type="button" class="btn" id="f-rl">↺ 90°</button><button type="button" class="btn" id="f-rr">↻ 90°</button>' +
       '<button type="button" class="btn" id="f-dup">复制</button><button type="button" class="btn" id="f-lock" aria-pressed="' + it.locked + '">' + (it.locked ? '已锁定' : '锁定') + '</button>' +
       '<button type="button" class="btn danger" id="f-del">删除</button></div>' +
@@ -1740,6 +1808,57 @@ function renderFurn(){
   $('#f-dup').addEventListener('click', dupSel);
   $('#f-lock').addEventListener('click', () => { it.locked = !it.locked; commit(); renderFurn(); });
   $('#f-del').addEventListener('click', delSel);
+  bindPhotoControls(it);
+}
+function photoMat(it){ return it.bare ? 0 : (it.mat != null ? it.mat : Math.min(it.w, it.h) * .15); }
+function photoControls(it){
+  if (!['photo', 'frame', 'noren'].includes(it.t)) return '';
+  let h = '<div class="card"><b>照片</b>';
+  if (it.t === 'photo'){
+    const m = photoMat(it), pw = cm(it.w - 2 * m), ph = cm(it.h - 2 * m);
+    h += '<div class="fields two"><label class="f">相纸规格<select id="p-size"><option value="">当前 ' + pw + '×' + ph + ' cm</option>' +
+      PRINT_SIZES.map(([n, a, b], i) => '<option value="' + i + ':v">' + n + ' 竖 ' + a + '×' + b + '</option><option value="' + i + ':h">' + n + ' 横 ' + b + '×' + a + '</option>').join('') + '</select></label>' +
+      (it.bare ? '' : '<label class="f">卡纸宽 cm<input type="number" id="p-mat" value="' + cm(m) + '" step="1" min="0"></label>') + '</div>' +
+      '<p class="hint">框的外尺寸 = 相纸 + 两边卡纸。相机原图是 2:3，2L、A 系列约 1:1.41，会裁掉一点（居中裁切）。</p>';
+  }
+  if (it.t === 'noren'){
+    h += '<p class="hint">正面朝洋室，背面朝和室。照片会铺满两片布、居中裁切，中间那条开口会从画面正中穿过，主体放在左右两侧更好看。</p>' +
+      '<div class="row"><label class="btn">正面照片<input type="file" id="p-img" accept="image/*" hidden></label><label class="btn">背面照片<input type="file" id="p-img2" accept="image/*" hidden></label>' +
+      ((it.img || it.img2) ? '<button type="button" class="btn danger" id="p-clear">移除照片</button>' : '') + '</div>';
+  } else {
+    h += '<div class="row"><label class="btn">放上我的照片<input type="file" id="p-img" accept="image/*" hidden></label>' + (it.img ? '<button type="button" class="btn danger" id="p-clear">移除照片</button>' : '') + '</div>';
+  }
+  return h + '<p class="hint">照片只存在这个浏览器里，不会上传。</p></div>';
+}
+function bindPhotoControls(it){
+  const sz = $('#p-size'), mt = $('#p-mat');
+  const reb = () => { buildItem(it); afterItemsMoved(); commit(); renderFurn(); };
+  if (sz) sz.addEventListener('change', () => {
+    if (!sz.value) return;
+    const [i, o] = sz.value.split(':'), [, a, b] = PRINT_SIZES[+i], m = photoMat(it);
+    const pw = (o === 'v' ? a : b) / 100, ph = (o === 'v' ? b : a) / 100;
+    it.w = pw + 2 * m; it.h = ph + 2 * m; if (!it.bare) it.mat = m; reb();
+  });
+  if (mt) mt.addEventListener('change', () => {
+    const v = parseFloat(mt.value); if (!(v >= 0)) return;
+    const m0 = photoMat(it), pw = it.w - 2 * m0, ph = it.h - 2 * m0;
+    it.mat = v / 100; it.w = pw + 2 * it.mat; it.h = ph + 2 * it.mat; reb();
+  });
+  const load = (input, field) => { if (!input) return; input.addEventListener('change', () => {
+    const f = input.files[0]; if (!f) return;
+    readPhoto(f, it.t === 'noren' ? 2400 : 1600, url => { const key = 'img_' + uid(); IMG[key] = url; it[field] = key; saveImgs(); reb(); });
+  }); };
+  load($('#p-img'), 'img'); load($('#p-img2'), 'img2');
+  const cl = $('#p-clear'); if (cl) cl.addEventListener('click', () => { delete it.img; delete it.img2; reb(); saveImgs(); });
+}
+function readPhoto(file, maxPx, done){
+  const rd = new FileReader();
+  rd.onload = () => { const img = new Image(); img.onload = () => {
+    const k = Math.min(1, maxPx / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); done(c.toDataURL('image/jpeg', .85));
+  }; img.src = rd.result; };
+  rd.readAsDataURL(file);
 }
 function updateBad(){
   const el = $('#f-bad'), bad = selId && problems.get(selId); if (!el) return;
@@ -1937,10 +2056,10 @@ let resetArmed = 0;
 function renderFile(){
   const p = $('#pane-file');
   p.innerHTML = '<section><h2>自动保存</h2><p class="hint" id="saveNote">' + esc(saveNote) + '</p><p class="hint">只存在这台设备的这个浏览器里。换手机或电脑前，先导出一份。</p></section>' +
-    '<section><h2>导出</h2><label class="row hint"><input type="checkbox" id="x-ul"> 包含底图（文本会很长）</label><textarea id="x-out" readonly aria-label="导出的方案"></textarea><div class="row"><button type="button" class="btn primary" id="x-copy">复制方案文本</button></div></section>' +
+    '<section><h2>导出</h2><label class="row hint"><input type="checkbox" id="x-ul"> 包含底图和我的照片（文本会很长）</label><textarea id="x-out" readonly aria-label="导出的方案"></textarea><div class="row"><button type="button" class="btn primary" id="x-copy">复制方案文本</button></div></section>' +
     '<section><h2>导入</h2><p class="hint">粘贴之前复制的方案文本，或选择保存的 .json 文件。</p><textarea id="x-in" aria-label="粘贴方案文本" placeholder="{ &quot;v&quot;: 1, ... }"></textarea><div class="row"><button type="button" class="btn" id="x-load">载入粘贴的方案</button><label class="btn">选择文件<input type="file" id="x-file" accept=".json,application/json,text/plain" hidden></label></div><p class="hint flag" id="x-err" hidden></p></section>' +
     '<section><h2>重新开始</h2><p class="hint">恢复成按间取图描出的初始布局，当前方案会被替换（可以撤销）。</p><button type="button" class="btn danger" id="x-reset" style="align-self:flex-start">恢复初始布局</button></section>';
-  const fill = () => { $('#x-out').value = JSON.stringify($('#x-ul').checked ? S : Object.assign({}, S, {underlay:null})); };
+  const fill = () => { $('#x-out').value = JSON.stringify($('#x-ul').checked ? Object.assign({}, S, {images:IMG}) : Object.assign({}, S, {underlay:null})); };
   fill(); $('#x-ul').addEventListener('change', fill);
   $('#x-copy').addEventListener('click', () => {
     const ta = $('#x-out'), btn = $('#x-copy');
@@ -1951,7 +2070,8 @@ function renderFile(){
   const importText = txt => {
     try { const s = JSON.parse(txt); if (!valid(s)) throw new Error('bad');
       if (!s.underlay && S.underlay) s.underlay = S.underlay;
-      S = Object.assign(templateState(), s); selId = null; commit(); rebuildAll(); $('#x-err').hidden = true; frame3d(); renderFile();
+      if (s.images){ Object.assign(IMG, s.images); delete s.images; }
+      S = Object.assign(templateState(), s); selId = null; commit(); saveImgs(); rebuildAll(); $('#x-err').hidden = true; frame3d(); renderFile();
     } catch(e){ const er = $('#x-err'); er.textContent = '没能识别这段文本，请确认是从「导出」复制的完整内容。'; er.hidden = false; }
   };
   $('#x-load').addEventListener('click', () => importText($('#x-in').value));
