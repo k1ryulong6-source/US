@@ -434,7 +434,11 @@ renderer.domElement.addEventListener('pointerdown', e => {
     const it = item(id);
     if (it && !it.locked){
       const p = floorPoint(e);
-      if (p){ drag = {id, dx:it.x - p.x, dz:it.z - p.z}; renderer.domElement.setPointerCapture(e.pointerId); e.stopImmediatePropagation(); }
+      if (p){
+        drag = {id, dx:it.x - p.x, dz:it.z - p.z}; renderer.domElement.setPointerCapture(e.pointerId); e.stopImmediatePropagation();
+        // OrbitControls reads fingers through its own touch listeners, so switch it off for the whole drag
+        ctl.enabled = false;
+      }
     }
   }
 });
@@ -448,8 +452,9 @@ renderer.domElement.addEventListener('pointermove', e => {
   placeItem(it); afterItemsMoved(); syncSelFields();
 });
 let lastTap = {t:0, x:0, y:0};
+window.addEventListener('pointercancel', () => { if (drag){ drag = null; ctl.enabled = true; commit(); } down = null; });
 window.addEventListener('pointerup', e => {
-  if (drag){ drag = null; commit(); down = null; return; }
+  if (drag){ drag = null; ctl.enabled = true; commit(); down = null; return; }
   if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 8 && performance.now() - down.t < 500 && e.target === renderer.domElement){
     const now = performance.now();
     if (view === 'walk' && now - lastTap.t < 350 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30){
