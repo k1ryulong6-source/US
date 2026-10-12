@@ -133,7 +133,7 @@ kbd{font:11px var(--f-mono);border:1px solid var(--line);border-bottom-width:2px
 <body>
 <div id="app">
   <div class="bar">
-    <div class="brand"><h1>小菅 2K · 2F</h1><small id="sizeInfo"></small></div>
+    <div class="brand"><h1>小菅 2K · 201</h1><small id="sizeInfo"></small></div>
     <div class="seg" role="group" aria-label="视角">
       <button type="button" data-view="3d" aria-pressed="true">3D</button>
       <button type="button" data-view="top" aria-pressed="false">平面</button>
@@ -153,7 +153,7 @@ kbd{font:11px var(--f-mono);border:1px solid var(--line);border-bottom-width:2px
       <div id="labels"></div>
       <div class="compass" id="compass"><i></i><b>N</b></div>
       <div class="notice" id="notice" hidden>
-        <p><b>这是示例 2K 布局，不是这套房的真实间取。</b>在「房间」里上传 SUUMO 的间取图作底图，再按图修改各房间的尺寸和门窗位置。</p>
+        <p><b>按 SUUMO 间取图描出的布局，尺寸误差约 ±10cm。</b>墙高、窗台和阁楼高度是看照片推测的；家具是示例摆放，可以随意删改。</p>
         <button type="button" class="btn" id="noticeClose">知道了</button>
       </div>
       <div class="hud" id="hud">x — · z —</div>
@@ -184,7 +184,7 @@ kbd{font:11px var(--f-mono);border:1px solid var(--line);border-bottom-width:2px
 /* ---------- constants & catalog ---------- */
 const JO = 1.62;          // m² per 帖 (real-estate convention)
 const WALL_T = 0.1;       // wall thickness, m (plan lines are wall centre lines, 芯々)
-const LS_KEY = 'kosuge2k-planner-v1';
+const LS_KEY = 'kosuge2k-planner-v2';
 
 const CATS = [['bedroom','卧室'],['living','客厅·书房'],['kitchen','厨房·家电'],['storage','收纳'],['decor','软装'],['fixed','固定设备']];
 const ITEMS = {
@@ -222,7 +222,12 @@ const ITEMS = {
   tub:{n:'浴缸',jp:'浴槽',cat:'fixed',w:.75,d:1.2,h:.55,c:'#f4f4f2',b:'tub',fixed:1},
   toilet:{n:'马桶',jp:'トイレ',cat:'fixed',w:.42,d:.7,h:.8,c:'#f4f4f2',b:'toilet',fixed:1},
   pan:{n:'防水盘',jp:'防水パン',cat:'fixed',w:.64,d:.64,h:.05,c:'#f4f4f2',b:'box',fixed:1,soft:1},
-  shoe:{n:'鞋柜',jp:'下駄箱',cat:'fixed',w:.8,d:.32,h:.9,c:'#c8a77e',b:'cabinet',fixed:1}
+  shoe:{n:'鞋柜',jp:'下駄箱',cat:'fixed',w:.8,d:.32,h:.9,c:'#c8a77e',b:'cabinet',fixed:1},
+  handSink:{n:'手洗池',jp:'手洗い',cat:'fixed',w:.45,d:.3,h:.75,c:'#f4f4f2',b:'vanity',fixed:1},
+  ac:{n:'空调',jp:'エアコン',cat:'fixed',w:.8,d:.25,h:.28,c:'#f4f4f2',b:'ac',fixed:1},
+  tenbukuro:{n:'天袋(吊柜)',jp:'天袋',cat:'fixed',w:1.7,d:.86,h:.55,c:'#d9c6a5',b:'wardrobe',fixed:1},
+  loft:{n:'阁楼 ロフト',jp:'ロフト',cat:'fixed',w:3.54,d:1.25,h:.9,c:'#b58a5e',b:'loft',fixed:1},
+  ladder:{n:'阁楼梯子',jp:'はしご',cat:'fixed',w:.5,d:1.2,h:2.4,c:'#9a6b4f',b:'ladder',fixed:1}
 };
 const FLOORS = {
   wood:{n:'木地板 フローリング',c:'#b58a5e'},
@@ -231,13 +236,14 @@ const FLOORS = {
   tile:{n:'瓷砖 タイル',c:'#d0cdc6'},
   bath:{n:'浴室地面',c:'#d6dadb'},
   carpet:{n:'地毯 カーペット',c:'#8f8a7e'},
-  concrete:{n:'水泥 コンクリート',c:'#a7a8a3'}
+  concrete:{n:'水泥 コンクリート',c:'#a7a8a3'},
+  stairs:{n:'楼梯',c:'#a9825a'}
 };
-const ROOM_TYPES = {room:'居室',entry:'玄关',wet:'水回り',storage:'收纳',balcony:'阳台(矮墙)'};
-const OPEN_TYPES = {door:'平开门',sliding:'推拉门/襖',window:'窗',opening:'门洞'};
+const ROOM_TYPES = {room:'居室',entry:'玄关',wet:'水回り',storage:'收纳',stair:'楼梯',balcony:'阳台(矮墙)'};
+const OPEN_TYPES = {door:'平开门',double:'对开门',sliding:'推拉门/折叠门',window:'窗',opening:'门洞'};
 const FURN_COLORS = ['#eceae4','#d8d2c4','#c8a77e','#9a6b4f','#6b4a33','#2a2a2a','#8b8f8c','#cdbfa6','#6f8f6a','#2f3e55','#b5603f','#e3c46a'];
-const FLOOR_TINTS = {wood:['#d9bf95','#b58a5e','#8a5f3c','#5b3d29','#c9c3b8'],tatami:['#c5bf86','#d4c890','#b3b07a'],cf:['#e3ddd2','#cfd2d0','#b9a48a'],tile:['#d0cdc6','#9a9993','#ece9e2'],carpet:['#8f8a7e','#5f6a73','#b7a68c'],bath:['#d6dadb'],concrete:['#a7a8a3']};
-const WALL_COLORS = ['#f1efe9','#ffffff','#e6e2d6','#dfe4e1','#d9d4cb','#c9d3cf','#e8d9cc','#cfd6e0'];
+const FLOOR_TINTS = {stairs:['#a9825a','#c8a77e'],wood:['#d9bf95','#b58a5e','#8a5f3c','#5b3d29','#c9c3b8'],tatami:['#c5bf86','#d4c890','#b3b07a'],cf:['#e3ddd2','#cfd2d0','#b9a48a'],tile:['#d0cdc6','#9a9993','#ece9e2'],carpet:['#8f8a7e','#5f6a73','#b7a68c'],bath:['#d6dadb'],concrete:['#a7a8a3']};
+const WALL_COLORS = ['#efe7da','#f1efe9','#ffffff','#e6e2d6','#dfe4e1','#d9d4cb','#c9d3cf','#e8d9cc','#cfd6e0'];
 
 /* ---------- helpers ---------- */
 const $ = (s, el) => (el || document).querySelector(s);
@@ -263,46 +269,49 @@ function I(t, x, z, rot, extra){
   const c = ITEMS[t];
   return Object.assign({id:uid(), t, name:c.n, x, z, y:0, w:c.w, d:c.d, h:c.h, rot:rot || 0, c:c.c, locked:!!c.fixed}, extra || {});
 }
+/* Layout traced from the SUUMO 間取り図 (201号室), scaled so the 6帖 和室 = 364×273 cm.
+   Plan axes follow the SUUMO drawing: X → right (north), Z → down (east). */
 function templateState(){
+  const yo = R('洋室','room','wood',0,0,3.64,2.68); yo.h = 3.3; yo.group = '洋室';
+  const al = R('洋室·天袋下','room','wood',0,2.68,1.82,.96); al.group = '洋室';
   return {
-    v:1, H:2.4, wallColor:'#f1efe9', northDeg:0, hour:14, noticeClosed:false,
+    v:2, H:2.4, wallColor:'#efe7da', northDeg:90, hour:13, noticeClosed:false,
     rooms:[
-      R('浴室','wet','bath',0,0,1.365,1.82),
-      R('洗面所','wet','cf',1.365,0,.91,1.82),
-      R('厨房 K','room','cf',2.275,0,2.73,1.82),
-      R('玄关','entry','tile',5.005,0,.91,1.82),
-      R('卫生间','wet','cf',5.915,0,.91,1.82),
-      R('押入','storage','wood',0,1.82,.91,1.82),
-      R('物入','storage','wood',0,3.64,.91,1.82),
-      R('和室','room','tatami',.91,1.82,2.73,3.64),
-      R('洋室','room','wood',3.64,1.82,3.185,3.64),
-      R('阳台','balcony','concrete',0,5.46,6.825,.91)
+      yo, al,
+      R('衣柜 クローゼット','storage','wood',1.82,2.68,.91,.96),
+      R('淋浴间','wet','bath',2.73,2.68,.91,.96),
+      R('和室','room','tatami',0,3.64,3.64,2.73),
+      R('阳台','balcony','concrete',-.91,3.64,.91,2.73),
+      R('卫生间','wet','cf',3.64,0,1.67,.91),
+      R('厨房 K','room','cf',3.64,.91,1.67,2.73),
+      R('楼梯(下1F)','stair','stairs',3.64,3.64,.91,1.82),
+      R('收纳','storage','wood',3.64,5.46,.91,.91)
     ],
     openings:[
-      O('door','h',5.46,0,.8,2.0,0,'a',-1),
-      O('opening','v',5.005,.9,1.0,2.0,0),
-      O('door','v',5.915,1.3,.6,1.9,0,'b',-1),
-      O('sliding','v',2.275,1.25,.7,1.9,0),
-      O('door','v',1.365,1.1,.65,1.9,0,'a',1),
-      O('sliding','h',2.95,1.82,.8,1.9,0),
-      O('door','h',4.3,1.82,.75,2.0,0,'a',1),
-      O('sliding','v',3.64,3.4,1.7,1.85,0),
-      O('sliding','v',.91,2.73,1.6,1.85,0),
-      O('sliding','v',.91,4.55,1.6,1.85,0),
-      O('window','h',2.275,5.46,1.7,1.8,.1),
-      O('window','h',5.23,5.46,1.7,1.8,.1),
-      O('window','h',3.4,0,.9,.9,1.0),
-      O('window','v',0,.9,.6,.6,1.2),
-      O('window','v',6.825,3.6,.9,1.1,.9),
-      O('window','h',6.37,0,.45,.45,1.4)
+      O('window','h',1.83,0,1.7,1.1,.85),          // 洋室 west window
+      O('window','v',0,.89,1.7,1.5,.3),            // 洋室 south window
+      O('window','v',0,4.545,1.7,1.8,0),           // 和室 → balcony (掃き出し窓)
+      O('window','h',1.82,6.37,1.68,1.1,.8),       // 和室 east window
+      O('window','h',4.94,0,.6,.6,1.2),            // toilet window
+      O('window','v',5.31,1.59,1.2,.9,1.05),       // kitchen window
+      O('door','h',4.1,.91,.75,1.8,0,'a',1),       // toilet door, opens into K
+      O('sliding','v',3.64,2.235,.85,1.8,0),       // 洋室 ↔ K
+      O('opening','h',4.1,3.64,.8,2.0,0),          // K ↔ stairs
+      O('opening','h',.91,2.68,1.82,2.4,0),        // 洋室 ↔ area under 天袋
+      O('opening','h',.92,3.64,1.75,1.8,0),        // under 天袋 ↔ 和室
+      O('double','h',2.3,2.68,.76,1.8,0,'a',-1),   // closet, 洋室 side
+      O('double','h',2.29,3.64,.73,1.8,0,'a',1),   // closet, 和室 side
+      O('sliding','h',3.19,2.68,.7,1.8,0),         // shower folding door
+      O('double','v',3.64,5.9,.8,1.75,0,'a',-1)    // 收纳 door
     ],
     items:[
-      I('counter',3.3,.35,0), I('pan',1.82,.37,0), I('washer',1.82,.37,0,{y:.05}), I('vanity',1.82,1.545,180),
-      I('tub',.45,.7,0), I('toilet',6.37,.4,0), I('shoe',5.705,.6,90),
-      I('fridge',4.6,.38,0),
-      I('tvStand',1.65,2.07,0,{w:1.2}), I('tv',1.65,2.07,0,{y:.4}), I('kotatsu',2.35,3.0,0), I('futon',2.1,4.7,90,{name:'布団(白天收进押入)'}),
-      I('bedSD',6.175,2.845,0), I('desk',3.965,4.8,270), I('officeChair',4.55,4.8,90), I('rug',5.0,4.35,0),
-      I('curtain',5.23,5.35,0,{w:1.9}), I('plant',6.45,5.05,0)
+      I('counter',4.935,1.62,90,{w:1.25,d:.65}), I('washer',4.96,3.28,90,{name:'洗衣机(房东提供)',locked:true}),
+      I('toilet',4.91,.46,90), I('handSink',3.95,.2,0),
+      I('ac',.55,.175,0,{y:2.05}), I('ac',.55,6.195,180,{y:1.95}),
+      I('loft',1.82,2.005,0,{y:2.4}), I('ladder',3.3,1.15,180), I('tenbukuro',.91,3.16,0,{y:1.85}),
+      I('fridge',4.935,2.62,90),
+      I('bedSD',.65,1.025,0), I('desk',2.0,.325,0), I('chair',2.0,.85,180),
+      I('kotatsu',1.8,5.0,0), I('tvStand',3.39,4.6,90,{w:1.2}), I('tv',3.39,4.6,90,{y:.4})
     ],
     underlay:null
   };
@@ -453,6 +462,7 @@ function setView(v){
   view = v;
   document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
   sun.castShadow = v !== 'top';
+  setTimeout(() => S.items.forEach(fadeOverhead));
   if (v === 'top'){ cam = ortho; ctl = ctlO; ctlP.enabled = false; ctlO.enabled = true; frameTop(); }
   else {
     cam = persp; ctl = ctlP; ctlO.enabled = false; ctlP.enabled = true;
@@ -504,6 +514,13 @@ function floorTex(kind, color){
       }
       g.fillStyle = 'rgba(30,18,8,.3)'; g.fillRect(0, r * rh, N, 1.5);
     }
+  } else if (kind === 'stairs'){
+    const n = 6, th = N / n;
+    for (let i = 0; i < n; i++){
+      g.fillStyle = shade(color, (i % 2 ? -0.04 : 0.04)); g.fillRect(0, i * th, N, th);
+      g.fillStyle = 'rgba(25,15,5,.55)'; g.fillRect(0, i * th + th - 6, N, 6);
+      g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(0, i * th, N, 3);
+    }
   } else if (kind === 'tatami'){
     size = 1.82;
     for (let m = 0; m < 2; m++){
@@ -542,7 +559,7 @@ function wallLines(){
   const lines = new Map();
   const add = (axis, c, a, b, h) => { const k = axis + ':' + Math.round(c * 1000); if (!lines.has(k)) lines.set(k, {axis, c, segs:[]}); lines.get(k).segs.push([Math.min(a, b), Math.max(a, b), h]); };
   for (const r of S.rooms){
-    const h = r.type === 'balcony' ? 1.1 : S.H;
+    const h = r.type === 'balcony' ? 1.1 : (r.h || S.H);
     add('h', r.z, r.x, r.x + r.w, h); add('h', r.z + r.d, r.x, r.x + r.w, h);
     add('v', r.x, r.z, r.z + r.d, h); add('v', r.x + r.w, r.z, r.z + r.d, h);
   }
@@ -618,19 +635,21 @@ function buildOpenings(){
         const b = new THREE.Mesh(new THREE.BoxGeometry(pw, o.h, 0.025), mat); b.position.set(o.w / 4 - 0.15, o.h / 2, 0.02);
         g.add(a, b);
       }
-    } else if (o.type === 'door'){
-      const hx = o.hinge === 'a' ? -o.w / 2 : o.w / 2;
-      if (vis(o.h)){
-        const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.035, o.h, o.w), new THREE.MeshStandardMaterial({color:lin('#cdb497'), roughness:0.7}));
-        leaf.position.set(hx, o.h / 2, ls * o.w / 2); leaf.castShadow = true; g.add(leaf);
-      }
-      const toOther = o.hinge === 'a' ? [1, 0] : [-1, 0], toSide = [0, ls];
-      const ang = v => Math.atan2(-v[1], v[0]);
-      const a1 = ang(toOther), a2 = ang(toSide);
-      let diff = a2 - a1; while (diff > Math.PI) diff -= 2 * Math.PI; while (diff < -Math.PI) diff += 2 * Math.PI;
-      const start = diff > 0 ? a1 : a2;
-      const arc = new THREE.Mesh(new THREE.RingGeometry(0, o.w, 24, 1, start, Math.PI / 2), new THREE.MeshBasicMaterial({color:lin(tok('--accent')), transparent:true, opacity:0.16, depthWrite:false, side:THREE.DoubleSide}));
-      arc.rotation.x = -Math.PI / 2; arc.position.set(hx, 0.006, 0); arc.renderOrder = 2; g.add(arc);
+    } else if (o.type === 'door' || o.type === 'double'){
+      const leaf = (end, len) => {
+        const hx = end === 'a' ? -o.w / 2 : o.w / 2;
+        if (vis(o.h)){
+          const m = new THREE.Mesh(new THREE.BoxGeometry(0.035, o.h, len), new THREE.MeshStandardMaterial({color:lin('#cdb497'), roughness:0.7}));
+          m.position.set(hx, o.h / 2, ls * len / 2); m.castShadow = true; g.add(m);
+        }
+        const toOther = end === 'a' ? [1, 0] : [-1, 0], toSide = [0, ls];
+        const ang = v => Math.atan2(-v[1], v[0]);
+        const a1 = ang(toOther), a2 = ang(toSide);
+        let diff = a2 - a1; while (diff > Math.PI) diff -= 2 * Math.PI; while (diff < -Math.PI) diff += 2 * Math.PI;
+        const arc = new THREE.Mesh(new THREE.RingGeometry(0, len, 24, 1, diff > 0 ? a1 : a2, Math.PI / 2), new THREE.MeshBasicMaterial({color:lin(tok('--accent')), transparent:true, opacity:0.16, depthWrite:false, side:THREE.DoubleSide}));
+        arc.rotation.x = -Math.PI / 2; arc.position.set(hx, 0.006, 0); arc.renderOrder = 2; g.add(arc);
+      };
+      if (o.type === 'double'){ leaf('a', o.w / 2); leaf('b', o.w / 2); } else leaf(o.hinge, o.w);
     }
     g.userData.openId = o.id; gOpen.add(g);
   }
@@ -724,6 +743,19 @@ const BUILD = {
   },
   vanity(g, w, d, h, c){ bx(g, w, h, d, c, 0, 0, 0); bx(g, w * .7, .02, d * .6, '#dfe3e4', 0, h, .03); bx(g, w, .9, .05, '#cfdde3', 0, h + .15, -d / 2 + .025, {metalness:.5, roughness:.1}); },
   tub(g, w, d, h, c){ bx(g, w, h, d, c, 0, 0, 0); bx(g, w - .1, .01, d - .1, '#9cc3d0', 0, h - .08, 0, {roughness:.1}); },
+  ac(g, w, d, h, c){ bx(g, w, h, d, c, 0, 0, 0, {roughness:.5}); bx(g, w * .9, .02, .02, '#9aa0a2', 0, .05, d / 2); },
+  loft(g, w, d, h, c){
+    bx(g, w, .1, d, c, 0, 0, 0);
+    const rh = Math.max(.3, h - .1), z = -d / 2 + .02, n = Math.max(2, Math.round(w / .12));
+    bx(g, w, .05, .05, c, 0, .1 + rh - .05, z);
+    for (let i = 0; i <= n; i++) bx(g, .03, rh - .05, .03, c, -w / 2 + .02 + i * (w - .04) / n, .1, z);
+  },
+  ladder(g, w, d, h, c){
+    const L = Math.hypot(d, h), a = -Math.atan2(d, h);
+    [-1, 1].forEach(sd => { const m = mk(new THREE.BoxGeometry(.05, L, .1), c); m.position.set(sd * (w / 2 - .025), h / 2, 0); m.rotation.x = a; g.add(m); });
+    const n = Math.max(3, Math.round(h / .26));
+    for (let i = 1; i <= n; i++){ const y = i * h / (n + 1); bx(g, w - .06, .03, .18, shade(c, .08), 0, y, d / 2 - d * y / h); }
+  },
   toilet(g, w, d, h, c){ bx(g, w * .9, h - .4, .2, c, 0, .4, -d / 2 + .1); cyl(g, w * .45, w * .35, .4, c, 0, 0, .05); bx(g, w * .9, .03, d * .55, c, 0, .4, .07); }
 };
 const itemObj = new Map();
@@ -733,8 +765,14 @@ function buildItem(it){
   const g = new THREE.Group(); const inner = new THREE.Group(); g.add(inner);
   const b = (ITEMS[it.t] || ITEMS.box).b;
   (BUILD[b] || BUILD.box)(inner, it.w, it.d, it.h, it.c);
-  g.userData.itemId = it.id; itemObj.set(it.id, g); gFurn.add(g); placeItem(it);
+  g.userData.itemId = it.id; itemObj.set(it.id, g); gFurn.add(g); placeItem(it); fadeOverhead(it);
   return g;
+}
+/* in plan view, overhead things (loft, 天袋, AC) turn see-through so furniture beneath stays visible */
+function fadeOverhead(it){
+  const g = itemObj.get(it.id); if (!g) return;
+  const fade = view === 'top' && (it.y || 0) >= 1.5;
+  g.traverse(o => { if (o.isMesh){ o.material.transparent = fade; o.material.opacity = fade ? .3 : 1; o.material.depthWrite = !fade; o.material.needsUpdate = true; } });
 }
 function placeItem(it){ const g = itemObj.get(it.id); if (!g) return; g.position.set(it.x, it.y || 0, it.z); g.rotation.y = -it.rot * Math.PI / 180; }
 function buildFurniture(){ for (const [, g] of itemObj){ gFurn.remove(g); disposeGroup(g); } itemObj.clear(); S.items.forEach(buildItem); }
@@ -769,7 +807,8 @@ function checkProblems(){
     const A = S.items[i], ca = ITEMS[A.t] || {};
     if (!ca.inWall){
       const r = roomAt(A.x, A.z), e = halfExt(A), t = WALL_T / 2 - 0.005;
-      if (!r || A.x - e.hx < r.x + t || A.x + e.hx > r.x + r.w - t || A.z - e.hz < r.z + t || A.z + e.hz > r.z + r.d - t) add(A.id, '碰到墙');
+      if (r && r.type === 'stair') add(A.id, '挡住楼梯');
+      else if (!r || A.x - e.hx < r.x + t || A.x + e.hx > r.x + r.w - t || A.z - e.hz < r.z + t || A.z + e.hz > r.z + r.d - t) add(A.id, '碰到墙');
     }
     if (ca.soft) continue;
     for (let j = i + 1; j < S.items.length; j++){
@@ -909,9 +948,12 @@ function project(x, y, z){
 function renderLabels(){
   const L = [];
   if (view !== 'walk'){
+    const grp = {};
+    for (const r of S.rooms) if (r.group) (grp[r.group] = grp[r.group] || []).push(r);
     for (const r of S.rooms){
-      const a = r.w * r.d;
-      L.push({x:r.x + r.w / 2, y:.05, z:r.z + r.d / 2, cls:'room', html:'<b>' + esc(r.name) + '</b><span>' + (r.type === 'room' || r.type === 'storage' ? (a / JO).toFixed(1) + '帖 · ' : '') + cm(r.w) + '×' + cm(r.d) + '</span>'});
+      let a = r.w * r.d;
+      if (r.group){ const gs = grp[r.group]; const big = gs.reduce((m, q) => q.w * q.d > m.w * m.d ? q : m); if (big !== r) continue; a = gs.reduce((t, q) => t + q.w * q.d, 0); }
+      L.push({x:r.x + r.w / 2, y:.05, z:r.z + r.d / 2, cls:'room', html:'<b>' + esc(r.group || r.name) + '</b><span>' + (r.type === 'room' ? (a / JO).toFixed(1) + '帖 · ' : '') + cm(r.w) + '×' + cm(r.d) + '</span>'});
     }
   }
   const it = selId && item(selId);
@@ -1073,8 +1115,16 @@ function delSel(){
 /* ---------- rooms pane ---------- */
 function renderRooms(){
   const p = $('#pane-rooms'); const u = S.underlay;
-  let h = '<section><h2>间取底图</h2>' +
-    '<p class="hint">把 SUUMO 页面里的间取图截图或保存下来，上传后它会平铺在地面上。用「两点定比例」点图上一段已知长度（比如 6帖房间的短边约 273cm），再按图调整下面的房间。</p>' +
+  let h = '<section><h2>房源 · 201号室</h2><div class="card">' +
+    '<div><b>6.2万円</b> <span class="meta">+ 管理费 2,000円 · 敷金 1个月 · 礼金 0</span></div>' +
+    '<div class="meta">2K · 30.62 m² · 南向き · 2F/2层 木造 · 1964年建（2019年翻新）</div>' +
+    '<div class="meta">东武伊势崎线 小菅駅 步行7分 · 五反野駅 8分</div>' +
+    '<p class="hint">设备：空调 2 台、洗衣机（房东提供）、阁楼（ロフト）+ 斜顶、室内晾衣杆、淋浴间（没有浴缸）、温水洗净马桶、可移动的 TV 对讲机。</p>' +
+    '<p class="hint">条件：定期借家 2 年（可再签，再签费 1 个月）、仅限非吸烟、不可养宠物、二人入居可（不可带幼儿）。</p>' +
+    '<p class="hint">布局是按 SUUMO 间取图描出来的，按 6帖和室 = 364×273cm 换算，误差约 ±10cm。墙高、窗台高度、阁楼高度是看照片推测的，看房时建议实测后在下面修改。</p>' +
+    '</div></section>' +
+    '<section><h2>间取底图</h2>' +
+    '<p class="hint">想核对描图准不准，可以把 SUUMO 的间取图上传当底图：用「两点定比例」点和室的长边，输入 364cm，再移动到和室左上角对齐。</p>' +
     '<label class="btn" style="align-self:flex-start">上传间取图<input type="file" id="u-file" accept="image/*" hidden></label>';
   if (u && u.src){
     h += '<div class="fields">' + numIn('width', '图宽 cm', cm(u.width), {id:'u-w'}) + numIn('x', '左上 X cm', cm(u.x), {id:'u-x'}) + numIn('z', '左上 Z cm', cm(u.z), {id:'u-z'}) + '</div>' +
@@ -1087,11 +1137,12 @@ function renderRooms(){
     }
   }
   h += '</section>';
-  h += '<section><h2>整体</h2><div class="fields two">' + numIn('H', '层高(天花板) cm', cm(S.H), {id:'s-H'}) + '</div><p class="hint">坐标单位 cm，X 向右、Z 向下（平面图上方为北）。房间尺寸按墙中心线计，墙厚 10cm。1帖 = 1.62 m²。</p></section>';
+  h += '<section><h2>整体</h2><div class="fields two">' + numIn('H', '默认墙高 cm', cm(S.H), {id:'s-H'}) + '</div><p class="hint">坐标单位 cm，X 向右、Z 向下，和 SUUMO 间取图同一方向（右为北，左为南）。房间尺寸按墙中心线计，墙厚 10cm。1帖 = 1.62 m²。</p></section>';
   h += '<section><h2>房间 <span class="meta">' + S.rooms.length + '</span></h2>';
   for (const r of S.rooms){
     h += '<div class="card' + (roomHL === r.id ? ' on' : '') + '" data-room="' + r.id + '"><header><input type="text" data-k="name" aria-label="房间名" value="' + esc(r.name) + '"><button type="button" class="btn danger" data-del="' + r.id + '" aria-label="删除房间">删除</button></header>' +
       '<div class="fields four">' + numIn('x', 'X', cm(r.x)) + numIn('z', 'Z', cm(r.z)) + numIn('w', '宽', cm(r.w)) + numIn('d', '深', cm(r.d)) + '</div>' +
+      (r.type === 'balcony' ? '' : '<div class="fields four">' + numIn('h', '墙高', cm(r.h || S.H)) + '</div>') +
       '<div class="fields two"><label class="f">类型<select data-k="type">' + Object.entries(ROOM_TYPES).map(([k, v]) => '<option value="' + k + '"' + (k === r.type ? ' selected' : '') + '>' + v + '</option>').join('') + '</select></label>' +
       '<label class="f">地面<select data-k="floor">' + Object.entries(FLOORS).map(([k, v]) => '<option value="' + k + '"' + (k === r.floor ? ' selected' : '') + '>' + v.n + '</option>').join('') + '</select></label></div>' +
       '<div class="meta" data-area>' + areaText(r) + '</div></div>';
@@ -1104,7 +1155,7 @@ function renderRooms(){
       '<button type="button" class="btn danger" data-del="' + o.id + '" aria-label="删除门窗">删除</button></header>' +
       '<div class="fields four">' + numIn('x', 'X', cm(o.x)) + numIn('z', 'Z', cm(o.z)) + numIn('w', '宽', cm(o.w)) + numIn('h', '高', cm(o.h)) + '</div>' +
       (o.type === 'window' ? '<div class="fields four">' + numIn('sill', '窗台高', cm(o.sill)) + '</div>' : '') +
-      (o.type === 'door' ? '<div class="fields two"><label class="f">门轴<select data-k="hinge"><option value="a"' + (o.hinge === 'a' ? ' selected' : '') + '>' + (o.axis === 'h' ? '左端' : '上端') + '</option><option value="b"' + (o.hinge === 'b' ? ' selected' : '') + '>' + (o.axis === 'h' ? '右端' : '下端') + '</option></select></label>' +
+      (o.type === 'door' || o.type === 'double' ? '<div class="fields two">' + (o.type === 'double' ? '' : '<label class="f">门轴<select data-k="hinge"><option value="a"' + (o.hinge === 'a' ? ' selected' : '') + '>' + (o.axis === 'h' ? '左端' : '上端') + '</option><option value="b"' + (o.hinge === 'b' ? ' selected' : '') + '>' + (o.axis === 'h' ? '右端' : '下端') + '</option></select></label>') +
         '<label class="f">开向<select data-k="side"><option value="1"' + (o.side === 1 ? ' selected' : '') + '>' + (o.axis === 'h' ? '向下(南)' : '向右(东)') + '</option><option value="-1"' + (o.side === -1 ? ' selected' : '') + '>' + (o.axis === 'h' ? '向上(北)' : '向左(西)') + '</option></select></label></div>' : '') +
       '</div>';
   }
@@ -1113,7 +1164,7 @@ function renderRooms(){
 
   $('#u-file').addEventListener('change', e => { const f = e.target.files[0]; if (f) loadUnderlay(f); });
   if (u && u.src){
-    const ufields = p.querySelector('section');
+    const ufields = p.querySelectorAll('section')[1];
     bindNum(ufields, u, k => {
       if (k === 'opacity' && underlayMesh) underlayMesh.children[0].material.opacity = u.opacity; else buildUnderlay();
     }, () => {});
@@ -1128,7 +1179,7 @@ function renderRooms(){
       $('#u-cancel').addEventListener('click', () => { calib = null; renderRooms(); });
     }
   }
-  bindNum(p.querySelectorAll('section')[1], S, () => rebuildStructure(), () => {});
+  bindNum(p.querySelectorAll('section')[2], S, () => rebuildStructure(), () => {});
   p.querySelectorAll('[data-room]').forEach(card => {
     const r = S.rooms.find(x => x.id === card.dataset.room);
     card.querySelector('[data-k="name"]').dataset.u = 'raw';
@@ -1136,6 +1187,7 @@ function renderRooms(){
     bindNum(card, r, k => {
       if (k === 'floor') r.fc = FLOORS[r.floor].c;
       if (['w', 'd'].includes(k)) r[k] = Math.max(.1, r[k]);
+      if (k === 'h') r.h = Math.max(.5, r.h);
       rebuildStructure(); card.querySelector('[data-area]').textContent = areaText(r);
     }, () => {});
     card.addEventListener('focusin', () => hl(r.id, card));
@@ -1233,7 +1285,7 @@ function renderFile(){
   p.innerHTML = '<section><h2>自动保存</h2><p class="hint" id="saveNote">' + esc(saveNote) + '</p><p class="hint">只存在这台设备的这个浏览器里。换手机或电脑前，先导出一份。</p></section>' +
     '<section><h2>导出</h2><label class="row hint"><input type="checkbox" id="x-ul"> 包含底图（文本会很长）</label><textarea id="x-out" readonly aria-label="导出的方案"></textarea><div class="row"><button type="button" class="btn primary" id="x-copy">复制方案文本</button></div></section>' +
     '<section><h2>导入</h2><p class="hint">粘贴之前复制的方案文本，或选择保存的 .json 文件。</p><textarea id="x-in" aria-label="粘贴方案文本" placeholder="{ &quot;v&quot;: 1, ... }"></textarea><div class="row"><button type="button" class="btn" id="x-load">载入粘贴的方案</button><label class="btn">选择文件<input type="file" id="x-file" accept=".json,application/json,text/plain" hidden></label></div><p class="hint flag" id="x-err" hidden></p></section>' +
-    '<section><h2>重新开始</h2><p class="hint">恢复成示例 2K 布局，当前方案会被替换（可以撤销）。</p><button type="button" class="btn danger" id="x-reset" style="align-self:flex-start">恢复示例布局</button></section>';
+    '<section><h2>重新开始</h2><p class="hint">恢复成按间取图描出的初始布局，当前方案会被替换（可以撤销）。</p><button type="button" class="btn danger" id="x-reset" style="align-self:flex-start">恢复初始布局</button></section>';
   const fill = () => { $('#x-out').value = JSON.stringify($('#x-ul').checked ? S : Object.assign({}, S, {underlay:null})); };
   fill(); $('#x-ul').addEventListener('change', fill);
   $('#x-copy').addEventListener('click', () => {
@@ -1252,7 +1304,7 @@ function renderFile(){
   $('#x-file').addEventListener('change', e => { const f = e.target.files[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => importText(rd.result); rd.readAsText(f); });
   $('#x-reset').addEventListener('click', e => {
     const b = e.currentTarget;
-    if (!resetArmed){ resetArmed = setTimeout(() => { resetArmed = 0; b.classList.remove('armed'); b.textContent = '恢复示例布局'; }, 3000); b.classList.add('armed'); b.textContent = '再点一次确认'; return; }
+    if (!resetArmed){ resetArmed = setTimeout(() => { resetArmed = 0; b.classList.remove('armed'); b.textContent = '恢复初始布局'; }, 3000); b.classList.add('armed'); b.textContent = '再点一次确认'; return; }
     clearTimeout(resetArmed); resetArmed = 0;
     const ul = S.underlay; S = templateState(); S.underlay = ul; selId = null; commit(); rebuildAll(); frame3d(); renderFile();
   });
@@ -1308,8 +1360,8 @@ window.addEventListener('blur', () => keys.clear());
 function rebuildStructure(){ buildRooms(); buildWalls(); buildOpenings(); updateSun(); checkProblems(); drawSelHelpers(); updateInfo(); }
 function rebuildAll(){ rebuildStructure(); buildFurniture(); buildUnderlay(); checkProblems(); drawSelHelpers(); renderPane(); $('#notice').hidden = !!S.noticeClosed; }
 function updateInfo(){
-  const inner = S.rooms.filter(r => r.type !== 'balcony').reduce((a, r) => a + r.w * r.d, 0);
-  $('#sizeInfo').textContent = '室内约 ' + inner.toFixed(1) + ' m²';
+  const inner = S.rooms.filter(r => r.type !== 'balcony' && r.type !== 'stair').reduce((a, r) => a + r.w * r.d, 0);
+  $('#sizeInfo').textContent = '6.2万円 · 南向き · 描图面积约 ' + inner.toFixed(1) + ' m²';
 }
 themeColors();
 rebuildAll();
