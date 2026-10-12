@@ -250,6 +250,8 @@ const ITEMS = {
   uplight:{n:'地面上照灯',jp:'アッパーライト',cat:'decor',w:.2,d:.2,h:.25,c:'#2a2a2a',b:'uplight',soft:1},
   recliner:{n:'单人沙发(机械可弹出)',jp:'リクライナー',cat:'living',w:.85,d:.95,h:1.0,c:'#6e6a62',b:'recliner'},
   monitor:{n:'显示器',jp:'モニター',cat:'living',w:.6,d:.2,h:.45,c:'#1c1c1c',b:'tv'},
+  deck:{n:'木地板拼块',jp:'ウッドパネル',cat:'decor',w:.8,d:1.2,h:.03,c:'#9a7b5a',b:'deck',soft:1},
+  pole:{n:'晾衣杆',jp:'物干し竿',cat:'decor',w:.06,d:2.4,h:.05,c:'#c9cdd0',b:'pole',soft:1},
   wallPanel:{n:'墙布/可撕墙纸',jp:'はがせる壁紙',cat:'decor',w:1.0,d:.006,h:2.4,c:'#24314a',b:'wallPanel',soft:1,inWall:1},
   ledBar:{n:'灯带(贴在天袋底下)',jp:'LEDバー',cat:'decor',w:.8,d:.04,h:.02,c:'#f4f4f2',b:'ledBar',soft:1,inWall:1},
   loungeChair:{n:'单人休闲椅',jp:'ラウンジチェア',cat:'living',w:.7,d:.75,h:.75,c:'#6b4a33',b:'loungeChair'},
@@ -1272,6 +1274,14 @@ const BUILD = {
     bx(g, w - 2 * aw - .04, seat - .14, .04, c, 0, 0, d / 2 + foot - .02, ghost);
     const rb = bx(g, w - 2 * aw, h - seat, .06, c, 0, seat - .02, -d / 2 + .1, ghost); rb.rotation.x = -.55;
   },
+  deck(g, w, d, h, c){
+    const n = Math.max(2, Math.round(w / .09));
+    for (let i = 0; i < n; i++) bx(g, w / n - .008, h, d, shade(c, i % 2 ? -.05 : .04), -w / 2 + (i + .5) * w / n, 0, 0, {roughness:.9});
+  },
+  pole(g, w, d, h, c){
+    const r = mk(new THREE.CylinderGeometry(.015, .015, d, 10), c, {metalness:.5, roughness:.35}); r.rotation.x = Math.PI / 2; r.position.y = h / 2; g.add(r);
+    for (const sd of [-1, 1]) bx(g, .03, .3, .03, '#9aa0a2', 0, h / 2, sd * (d / 2 - .1));
+  },
   wallPanel(g, w, d, h, c){ bx(g, w, h, d, c, 0, 0, 0, {roughness:.95}); },
   ledBar(g, w, d, h, c){ addGlow(g, 0, -.05, 0, .45); const m = bx(g, w, h, d, c, 0, 0, 0, {emissive:lin('#fff4dc'), emissiveIntensity:1}); m.userData.lampGlow = true; },
   loungeChair(g, w, d, h, c){
@@ -1602,6 +1612,26 @@ const workCorner = (P, rc, dc) => [
   // the desk stands 26 cm in front of the west window, so that window gets a roller blind inside its frame
   P('wallPanel', 1.83, .03, 0, {w:1.7, h:1.45, y:.45, c:'#f1ece2', name:'西窗卷帘(装在窗框内, 不碰桌子)'})
 ];
+/* 和室 as a futon room: laid out at night with the head to the south (not north, 北枕), folded into the closet
+   every morning so the tatami can breathe. Kept clear of the closet and storage door swings. */
+const waRoom = (P, quilt) => [
+  P('futon', 2.3, 4.6, 270, {w:1.0, d:2.1, h:.12, c:quilt, name:'布団 100×210(头朝南, 早上叠进衣柜)'}),
+  P('paperLamp', 1.0, 5.4, 0, {w:.28, d:.28, h:.5, name:'行灯(枕边的小纸灯)'})
+];
+/* the south balcony: removable deck tiles over the concrete, a drying pole, herbs, one folding chair at the far end */
+const balconyItems = P => [
+  P('deck', -.455, 5.005, 0, {w:.8, d:2.62, h:.03, name:'木地板拼块(可拆, 铺在水泥上)'}),
+  P('pole', -.55, 5.0, 0, {d:2.4, y:1.75, name:'晾衣杆(挂在物干金具上, 金具位置待确认)'}),
+  P('plant', -.72, 3.85, 0, {w:.25, d:.25, h:.45, c:'#5f7a4a', name:'香草盆栽'}),
+  P('plant', -.72, 4.15, 0, {w:.25, d:.25, h:.35, c:'#6f8a52', name:'香草盆栽'}),
+  P('chair', -.45, 6.0, 90, {w:.42, d:.45, h:.75, c:'#3a3a3a', name:'折叠椅(朝外坐)'})
+];
+/* the loft as light storage along its high middle; the ladder's arrival spot stays clear */
+const loftItems = P => [
+  P('box', .95, 2.35, 0, {w:.74, d:.44, h:.3, y:2.5, c:'#ecebe6', name:'阁楼 · 衣装ケース(换季衣物)'}),
+  P('box', 1.72, 2.35, 0, {w:.74, d:.44, h:.3, y:2.5, c:'#ecebe6', name:'阁楼 · 衣装ケース(换季衣物)'}),
+  P('box', 2.6, 2.33, 0, {w:.7, d:.5, h:.4, y:2.5, c:'#d6d0c2', name:'阁楼 · 冬被/客用布団(收纳袋)'})
+];
 function designItems(){
   const P = (t, x, z, rot, extra) => Object.assign(I(t, x, z, rot), {locked:false}, extra || {});
   const oak = '#a87b50', walnut = '#6b4a33', linen = '#e3d9c8', indigo = '#2f3e55', olive = '#5f6b4d';
@@ -1612,16 +1642,16 @@ function designItems(){
     // 洋室 — low sofa facing the west window; low pieces make the 勾配天井 feel higher
     P('frame', 3.575, .3, 90, {w:.3, h:.4, y:1.45, c:'#6f7a52', name:'梯子边小画(石膏板钉)'}),
     P('frame', 3.575, .3, 90, {w:.3, h:.4, y:.95, c:'#b8902f', name:'梯子边小画(石膏板钉)'}),
-    P('lowTable', 1.27, 1.0, 0, {w:.45, d:.45, h:.45, c:walnut, name:'边几(沙发右手边)'}),
+    P('lowTable', 1.27, 1.0, 0, {w:.45, d:.45, h:.45, c:walnut, name:'边几(沙发旁)'}),
     myCabinet(P),
     P('rug', 1.7, .9, 0, {w:1.6, d:1.2, c:'#cfc4b0', name:'地毯 160×120'}),
     P('plant', 2.55, .3, 0, {h:1.1, name:'绿植'}),
     P('curtain', .17, .89, 90, {w:1.85, h:1.2, y:.8, c:linen, name:'窗帘 南腰窗(到窗台)'}),
     // 和室 — bedroom: slatted low bed in the north half, the south half kept open toward the balcony
-    P('bedSD', 2.615, 4.75, 90, {h:.3, c:'#b8916a', name:'すのこ低床 半双人 120×195'}),
-    P('nightstand', 3.35, 3.95, 90, {c:oak, name:'床头柜'}),
-    P('mirror', 2.95, 3.73, 0, {c:oak, name:'穿衣镜'}),
-    P('chest', .275, 5.94, 270, {c:oak, name:'斗柜 75×45×100'}),
+    ...waRoom(P, '#c9d3dc'),
+    P('chabudai', 2.1, 5.85, 0, {w:.6, d:.6, h:.33, c:walnut, name:'矮圆桌(东窗边)'}),
+    P('zabuton', 2.65, 5.85, 270, {c:indigo}),
+    ...balconyItems(P), ...loftItems(P),
     P('plant', 2.85, 6.1, 0, {h:.9, name:'绿植'}),
     P('curtain', .17, 4.545, 90, {w:1.9, h:1.6, y:.3, c:'#d8cfbf', name:'窗帘 阳台窗(遮光)'}),
     P('curtain', 1.82, 6.2, 0, {w:1.85, h:1.6, y:.3, c:'#d8cfbf', name:'窗帘 东窗(遮光)'}),
@@ -1642,7 +1672,7 @@ function artistItems(){
     P('roundRug', 1.6, .95, 0, {w:1.6, d:1.6, c:'#2b3a55', name:'靛蓝圆地毯 Ø160'}),
     ...workCorner(P, ai, '#3a2a20'),
     P('wallPanel', 3.585, .915, 90, {w:1.73, h:2.8, c:'#1f2b44', name:'梯子墙 · 靛蓝可撕墙纸'}),
-    P('lowTable', 1.27, 1.0, 0, {w:.45, d:.45, h:.45, c:red, name:'朱漆边几(沙发右手边)'}),
+    P('lowTable', 1.27, 1.0, 0, {w:.45, d:.45, h:.45, c:red, name:'朱漆边几(沙发旁)'}),
     myCabinet(P),
     P('paperLamp', 1.6, .95, 0, {y:1.7, w:.8, d:.8, h:.8, name:'大和纸灯 Ø80(从屋脊垂下)'}),
     P('banner', 1.6, 1.36, 0, {y:1.5, w:1.1, h:1.7, c:'#2b3a55', name:'靛染长布(系在阁楼栏杆上垂下)'}),
@@ -1650,8 +1680,8 @@ function artistItems(){
     // the threshold: a red thread curtain, the colour lifted from the kitchen floor
     P('curtain', .925, 3.64, 0, {w:1.75, h:1.2, y:.6, c:red, name:'朱红丝线门帘'}),
     // 和室 — empty
-    P('futon', 3.2, 4.25, 0, {w:.7, d:1.0, h:.3, c:'#f2efe8', name:'白天叠起的被褥'}),
-    P('paperLamp', .7, 5.95, 0, {w:.55, d:.55, h:1.2, name:'落地和纸灯 高120'}),
+    ...waRoom(P, '#f2efe8'),
+    ...balconyItems(P), ...loftItems(P),
     P('banner', 3.575, 4.6, 90, {y:.6, w:1.8, h:1.2, c:'#ece6da', name:'長押上的一幅横布'}),
     P('plant', 2.2, 6.05, 0, {w:.3, d:.3, h:.6, c:'#6f7a52', name:'一枝花'}),
     P('fridge', 4.96, 2.62, 90, {w:.5, d:.6, h:1.2, name:'冰箱 2门约150L(高≤120)'}),
@@ -1683,12 +1713,13 @@ function photoItems(){
     myCabinet(P),
     P('lamp', 1.15, 2.05, 0, {h:1.5, name:'落地灯 2700K(光从侧面扫过柜门)'}),
     P('rug', 1.65, 1.3, 90, {w:1.6, d:1.2, c:'#b9b2a6', name:'暖灰地毯'}),
-    P('lowTable', 1.27, 1.0, 0, {w:.45, d:.45, h:.45, c:'#1e1e1e', name:'哑光黑边几(沙发右手边)'}),
+    P('lowTable', 1.27, 1.0, 0, {w:.45, d:.45, h:.45, c:'#1e1e1e', name:'哑光黑边几(沙发旁)'}),
     P('paperLamp', 1.27, 1.0, 0, {y:1.45, w:.4, d:.4, h:.3, name:'低吊灯(只照亮边几)'}),
     P('uplight', 2.6, .35, 0, {name:'地面上照灯(打亮斜顶和原木梁)'}),
     P('curtain', .17, .89, 90, {w:1.85, h:1.2, y:.8, c:sheer, name:'亚麻纱帘(到窗台)'}),
     // 和室 — morning room; the end of the sightline from the 洋室 is a big plant backlit by the east window
-    P('bedSD', 2.615, 4.75, 90, {h:.25, c:'#9c8f80', name:'低床(东窗晨光叫醒你)'}),
+    ...waRoom(P, '#d9d4ca'),
+    ...balconyItems(P), ...loftItems(P),
     P('plant', 1.1, 6.0, 0, {w:.6, d:.6, h:1.6, c:'#4f6b45', name:'大叶植物(两室视线尽头, 逆光剪影)'}),
     P('chabudai', 2.1, 5.85, 0, {w:.6, d:.6, h:.33, name:'早餐小圆桌(东窗边)'}),
     P('zabuton', 2.65, 5.85, 270, {c:'#8c8a85'}),
@@ -1705,13 +1736,27 @@ const SCHEMES = {
   artist:{n:'艺术家 · 满与空', d:'两间房做成一组对照：洋室浸在靛蓝里，饱满；和室几乎清空，只留「间」。门帘的朱红取自厨房那块旧红地板。', wall:'#efebe3', items:artistItems, person:[3.25, 2.3, 121]},
   photo:{n:'摄影师 · 光的房子', d:'窗全是磨砂玻璃，只进光不看景。生活跟着光走：东窗叫醒你，西窗送走一天。墙保留原来的米色壁纸，每条视线尽头只放一件主角。', wall:'#e6d8c3', items:photoItems, person:[3.35, 2.25, 90]}
 };
+/* the computer corner can sit by the windows (south-west corner) or beside the loft ladder */
+const DESK_SPOTS = {
+  window:{n:'窗边角', desk:[.62, .29, 0], mon:[.62, .18, 0], rec:[.62, .98, 180], side:[1.27, 1.0]},
+  ladder:{n:'梯子旁', desk:[2.79, 1.17, 90], mon:[2.9, 1.17, 90], rec:[2.10, 1.17, 270], side:[2.05, .52]}
+};
+function setDeskSpot(k){
+  const sp = DESK_SPOTS[k], find = f => S.items.filter(f);
+  const desk = find(i => (i.name || '').startsWith('你的电脑桌')), rec = find(i => (i.name || '').startsWith('你的单人沙发'));
+  if (!desk.length || !rec.length){ showTip('先在上面载入一个方案', 3000); return; }
+  const put = (list, [x, z, rot]) => list.forEach(i => { i.x = x; i.z = z; if (rot != null) i.rot = rot; });
+  put(desk, sp.desk); put(find(i => i.name === '显示器'), sp.mon); put(rec, sp.rec);
+  put(find(i => (i.name || '').includes('沙发旁') || (i.name || '').startsWith('低吊灯')), sp.side);
+  S.deskSpot = k; S.items.forEach(placeItem); checkProblems(); commit(); drawSelHelpers(); renderFurn();
+}
 function applyScheme(key){
   const sc = SCHEMES[key];
   const keep = S.items.filter(i => (ITEMS[i.t] || {}).fixed || i.locked);
   const person = S.items.find(i => i.t === 'person');
   if (person) Object.assign(person, {x:sc.person[0], z:sc.person[1], rot:sc.person[2]});
   S.items = keep.concat(person ? [person] : [], sc.items());
-  S.wallColor = sc.wall;
+  S.wallColor = sc.wall; S.deskSpot = 'window';
   selId = null; rebuildStructure(); buildFurniture(); checkProblems(); commit(); drawSelHelpers(); renderFurn();
   showTip('已载入「' + sc.n + '」· 不满意点「撤销」', 4000);
 }
@@ -1779,7 +1824,9 @@ function renderFurn(){
   } else {
     h += '<section><h2>选中的家具</h2><div class="empty">在图里点一下家具选中它，再按住拖动；或从下面的目录添加，新家具会放在视图中心。</div></section>';
     h += '<section><h2>方案</h2><p class="hint">载入会替换你放的家具和墙色（房东设备不动），可以撤销。</p>' + Object.entries(SCHEMES).map(([k, v]) =>
-      '<div class="card"><header><b>' + v.n + '</b></header><p class="hint">' + v.d + '</p><button type="button" class="btn primary" data-scheme="' + k + '" style="align-self:flex-start">载入</button></div>').join('') + '</section>';
+      '<div class="card"><header><b>' + v.n + '</b></header><p class="hint">' + v.d + '</p><button type="button" class="btn primary" data-scheme="' + k + '" style="align-self:flex-start">载入</button></div>').join('') +
+      '<div class="row"><span class="hint">电脑桌位置</span><div class="seg" role="group" aria-label="电脑桌位置">' + Object.entries(DESK_SPOTS).map(([k, v]) =>
+        '<button type="button" data-deskspot="' + k + '" aria-pressed="' + ((S.deskSpot || 'window') === k) + '">' + v.n + '</button>').join('') + '</div></div></section>';
   }
   h += '<section><h2>添加家具</h2><p class="hint">尺寸按日本常见规格预设，添加后可改成你实际要买的尺寸。</p>';
   for (const [k, n] of CATS){
@@ -1790,6 +1837,7 @@ function renderFurn(){
   p.innerHTML = h;
   p.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => addItem(b.dataset.add)));
   p.querySelectorAll('[data-scheme]').forEach(b => b.addEventListener('click', () => applyScheme(b.dataset.scheme)));
+  p.querySelectorAll('[data-deskspot]').forEach(b => b.addEventListener('click', () => setDeskSpot(b.dataset.deskspot)));
   renderFurnList();
   if (!it) return;
   const card = p.querySelector('.card');
