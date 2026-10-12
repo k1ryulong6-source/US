@@ -229,6 +229,7 @@ const ITEMS = {
   fridge:{n:'冰箱',jp:'冷蔵庫',cat:'kitchen',w:.6,d:.65,h:1.5,c:'#e9e9e6',b:'fridge'},
   washer:{n:'洗衣机',jp:'洗濯機',cat:'kitchen',w:.6,d:.6,h:1.0,c:'#f1f1ee',b:'washer'},
   rack:{n:'厨房置物架',jp:'レンジ台',cat:'kitchen',w:.6,d:.45,h:1.8,c:'#2a2a2a',b:'shelf'},
+  microwave:{n:'微波炉',jp:'電子レンジ',cat:'kitchen',w:.45,d:.35,h:.27,c:'#f0f0ee',b:'microwave'},
   stove:{n:'燃气灶(2口)',jp:'ガスコンロ',cat:'kitchen',w:.56,d:.4,h:.2,c:'#3a3a3a',b:'stove'},
   cupboard:{n:'餐具柜',jp:'食器棚',cat:'kitchen',w:.8,d:.45,h:1.8,c:'#eceae4',b:'wardrobe'},
   wardrobe:{n:'衣柜',jp:'ワードローブ',cat:'storage',w:.9,d:.58,h:1.8,c:'#eceae4',b:'wardrobe'},
@@ -1117,6 +1118,11 @@ const BUILD = {
     bx(g, w, h, d, c, 0, 0, 0);
     for (const y of [h * .62, h * .25]) for (const x of [-.012, .012]) bx(g, .006, .018, .004, '#555', x, y, d / 2);
   },
+  microwave(g, w, d, h, c){
+    bx(g, w, h, d, c, 0, 0, 0, {roughness:.4});
+    bx(g, w * .62, h * .7, .006, '#2a2d30', -w * .12, h * .15, d / 2, {roughness:.15, metalness:.3});
+    bx(g, w * .2, h * .7, .006, '#d9dbdc', w * .36, h * .15, d / 2);
+  },
   stove(g, w, d, h, c){
     bx(g, w, h - .02, d, c, 0, 0, 0, {metalness:.3, roughness:.4});
     for (const sd of [-1, 1]){ cyl(g, .09, .09, .02, '#1e1e1e', sd * w * .25, h - .02, -.02); cyl(g, .04, .04, .028, '#7a7a7a', sd * w * .25, h - .02, -.02); }
@@ -1410,6 +1416,48 @@ function bindNum(root, obj, onLive, onDone){
 }
 const numIn = (k, label, val, opt) => '<label class="f' + (opt && opt.wide ? ' wide' : '') + '">' + label + '<input type="number" id="' + (opt && opt.id ? opt.id : '') + '" data-k="' + k + '"' + (opt && opt.u ? ' data-u="' + opt.u + '"' : '') + ' value="' + val + '" step="' + (opt && opt.step || 1) + '"></label>';
 
+/* ---------- designer's plan: 和室 as the bedroom, 洋室 as living room + workspace ----------
+   Low furniture under the 洋室's sloped ceiling, warm mid-tone wood to match the existing trims,
+   linen and indigo textiles. Every piece keeps the paths, door swings and the ladder foot clear. */
+function designItems(){
+  const P = (t, x, z, rot, extra) => Object.assign(I(t, x, z, rot), {locked:false}, extra || {});
+  const oak = '#a87b50', walnut = '#6b4a33', linen = '#e3d9c8', indigo = '#2f3e55', olive = '#5f6b4d';
+  return [
+    // 洋室 — work corner by the south window, side-lit by the big west window
+    P('desk', .325, .6, 270, {w:1.0, d:.55, c:oak, name:'书桌 100×55'}),
+    P('officeChair', .93, .6, 90, {c:'#2a2a2a', name:'办公椅(下垫地板保护垫)'}),
+    P('lamp', .3, 1.45, 0, {c:'#efe6d2', name:'落地灯(朝斜顶打光)'}),
+    // 洋室 — low sofa facing the west window; low pieces make the 勾配天井 feel higher
+    P('sofa2', 1.6, 1.5, 180, {w:1.4, d:.8, h:.65, c:olive, name:'低背双人沙发 140'}),
+    P('lowTable', 1.75, .65, 0, {w:.9, d:.45, h:.35, c:walnut, name:'矮茶几 90×45'}),
+    P('rug', 1.7, .9, 0, {w:1.6, d:1.2, c:'#cfc4b0', name:'地毯 160×120'}),
+    P('plant', 2.55, .3, 0, {h:1.1, name:'绿植'}),
+    P('curtain', 1.83, .17, 0, {w:1.95, h:1.7, y:.3, c:linen, name:'窗帘 西大窗(遮光+纱帘)'}),
+    P('curtain', .17, .89, 90, {w:1.85, h:1.3, y:.7, c:linen, name:'窗帘 南腰窗'}),
+    // 和室 — bedroom: slatted low bed in the north half, the south half kept open toward the balcony
+    P('bedSD', 2.615, 4.75, 90, {h:.3, c:'#b8916a', name:'すのこ低床 半双人 120×195'}),
+    P('nightstand', 3.35, 3.95, 90, {c:oak, name:'床头柜'}),
+    P('mirror', 2.95, 3.73, 0, {c:oak, name:'穿衣镜'}),
+    P('chest', .275, 5.94, 270, {c:oak, name:'斗柜 75×45×100'}),
+    P('plant', 2.85, 6.1, 0, {h:.9, name:'绿植'}),
+    P('curtain', .17, 4.545, 90, {w:1.9, h:1.6, y:.3, c:'#d8cfbf', name:'窗帘 阳台窗(遮光)'}),
+    P('curtain', 1.82, 6.2, 0, {w:1.85, h:1.6, y:.3, c:'#d8cfbf', name:'窗帘 东窗(遮光)'}),
+    P('curtain', .925, 3.64, 0, {w:1.75, h:1.75, c:indigo, name:'门帘(伸缩杆, 隔开卧室)'}),
+    // kitchen — compact fridge so a microwave can sit on top; stove on the drainboard end
+    P('fridge', 4.96, 2.62, 90, {w:.5, d:.6, h:1.2, name:'冰箱 2门约150L(高≤120)'}),
+    P('microwave', 4.96, 2.62, 90, {y:1.2}),
+    P('stove', 4.95, 1.95, 90, {y:.85})
+  ];
+}
+function applyDesign(){
+  const keep = S.items.filter(i => (ITEMS[i.t] || {}).fixed || i.locked);
+  const person = S.items.find(i => i.t === 'person');
+  if (person) Object.assign(person, {x:2.7, z:.95, rot:90});
+  S.items = keep.concat(person ? [person] : [], designItems());
+  selId = null; buildFurniture(); checkProblems(); commit(); drawSelHelpers(); renderFurn();
+  showTip('已载入设计师方案 · 不满意可以点「撤销」', 4000);
+}
+
 /* ---------- furniture pane ---------- */
 function select(id){
   selId = id; drawSelHelpers();
@@ -1471,6 +1519,7 @@ function renderFurn(){
       '</div></section>';
   } else {
     h += '<section><h2>选中的家具</h2><div class="empty">在图里点一下家具选中它，再按住拖动；或从下面的目录添加，新家具会放在视图中心。</div></section>';
+    h += '<section><h2>设计师方案</h2><div class="card"><p class="hint"><b>和室做卧室，洋室做起居和工作。</b>低矮家具衬出斜顶的高度，木色跟原有木框一致，配亚麻色和靛蓝。会替换你放的家具（房东设备不动），可以撤销。</p><button type="button" class="btn primary" id="f-design" style="align-self:flex-start">载入设计师方案</button></div></section>';
   }
   h += '<section><h2>添加家具</h2><p class="hint">尺寸按日本常见规格预设，添加后可改成你实际要买的尺寸。</p>';
   for (const [k, n] of CATS){
@@ -1480,6 +1529,7 @@ function renderFurn(){
   h += '</section><section><h2>已摆放 <span id="f-count" class="meta"></span></h2><div class="list" id="f-list"></div></section>';
   p.innerHTML = h;
   p.querySelectorAll('[data-add]').forEach(b => b.addEventListener('click', () => addItem(b.dataset.add)));
+  const db = $('#f-design'); if (db) db.addEventListener('click', applyDesign);
   renderFurnList();
   if (!it) return;
   const card = p.querySelector('.card');
