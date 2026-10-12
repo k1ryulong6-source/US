@@ -1263,13 +1263,14 @@ const BUILD = {
   },
   recliner(g, w, d, h, c){
     // mechanical recliner: the pale ghost in front is the footrest when it pops out — keep that space clear
-    const aw = .14, ghost = {transparent:true, opacity:.22, depthWrite:false};
-    bx(g, w - .02, .38, d * .82, shade(c, -.1), 0, 0, .02);
-    bx(g, w - 2 * aw, .14, d * .7, c, 0, .38, .08, {roughness:1});
-    const back = bx(g, w - 2 * aw, h - .45, .26, c, 0, .45, -d / 2 + .14, {roughness:1}); back.rotation.x = -.12;
-    for (const sd of [-1, 1]) bx(g, aw, .62, d * .86, shade(c, -.05), sd * (w / 2 - aw / 2), 0, .02, {roughness:1});
-    bx(g, w - 2 * aw - .04, .1, .62, c, 0, .32, d / 2 + .31, ghost);
-    bx(g, w - 2 * aw - .04, .32, .05, c, 0, 0, d / 2 + .6, ghost);
+    const it = curItem || {}, seat = it.seat || .45, foot = it.foot || .55, aw = Math.min(.14, w * .17), ghost = {transparent:true, opacity:.22, depthWrite:false};
+    bx(g, w - .02, seat - .12, d * .85, shade(c, -.1), 0, 0, .02);
+    bx(g, w - 2 * aw, .12, d * .72, c, 0, seat - .12, .07, {roughness:1});
+    const back = bx(g, w - 2 * aw, h - seat + .05, .22, c, 0, seat - .05, -d / 2 + .12, {roughness:1}); back.rotation.x = -.1;
+    for (const sd of [-1, 1]) bx(g, aw, seat + .18, d * .88, shade(c, -.05), sd * (w / 2 - aw / 2), 0, .02, {roughness:1});
+    bx(g, w - 2 * aw - .04, .08, foot - .04, c, 0, seat - .14, d / 2 + foot / 2, ghost);
+    bx(g, w - 2 * aw - .04, seat - .14, .04, c, 0, 0, d / 2 + foot - .02, ghost);
+    const rb = bx(g, w - 2 * aw, h - seat, .06, c, 0, seat - .02, -d / 2 + .1, ghost); rb.rotation.x = -.55;
   },
   wallPanel(g, w, d, h, c){ bx(g, w, h, d, c, 0, 0, 0, {roughness:.95}); },
   ledBar(g, w, d, h, c){ addGlow(g, 0, -.05, 0, .45); const m = bx(g, w, h, d, c, 0, 0, 0, {emissive:lin('#fff4dc'), emissiveIntensity:1}); m.userData.lampGlow = true; },
@@ -1591,13 +1592,15 @@ const numIn = (k, label, val, opt) => '<label class="f' + (opt && opt.wide ? ' w
    Low furniture under the 洋室's sloped ceiling, warm mid-tone wood to match the existing trims,
    linen and indigo textiles. Every piece keeps the paths, door swings and the ladder foot clear. */
 /* the viewer's own cabinet fits under the upper half of the loft ladder (≥1.2 m clear there) */
-const myCabinet = P => P('wardrobe', .275, 2.175, 270, {w:.85, d:.45, h:2.0, c:'#8a6a4a', name:'你的柜子 约2m高(南墙窗右侧, 尺寸待确认)'});
+const myCabinet = P => P('wardrobe', .235, 2.15, 270, {w:.8, d:.37, h:1.8, c:'#8a6a4a', name:'你的柜子 80×37×180(南墙窗右侧)'});
 /* the computer corner: desk against the west wall in the 洋室's south corner, the west window to your right.
    The viewer's recliner is the desk chair; its footrest pops out under the desk (open knee space, no low crossbar). */
 const workCorner = (P, rc, dc) => [
-  P('desk', .48, .325, 0, {w:.85, d:.55, h:.7, c:dc || '#a87b50', name:'电脑桌 85×55 高70(桌下全空, 脚托伸进去)'}),
-  P('monitor', .48, .15, 0, {y:.7, name:'显示器'}),
-  P('recliner', .48, 1.17, 180, {c:rc, name:'你的单人沙发=电脑椅(虚影=脚托, 伸到桌下)'})
+  P('desk', .62, .29, 0, {w:1.14, d:.48, h:.75, c:dc || '#a87b50', name:'你的电脑桌 114×48×75'}),
+  P('monitor', .62, .18, 0, {y:.75, name:'显示器'}),
+  P('recliner', .62, .98, 180, {w:.78, d:.70, h:.90, seat:.40, foot:.50, c:rc, name:'你的单人沙发 78×70 座高40 背高90(虚影=脚托/后仰)'}),
+  // the desk stands 26 cm in front of the west window, so that window gets a roller blind inside its frame
+  P('wallPanel', 1.83, .03, 0, {w:1.7, h:1.45, y:.45, c:'#f1ece2', name:'西窗卷帘(装在窗框内, 不碰桌子)'})
 ];
 function designItems(){
   const P = (t, x, z, rot, extra) => Object.assign(I(t, x, z, rot), {locked:false}, extra || {});
@@ -1609,12 +1612,11 @@ function designItems(){
     // 洋室 — low sofa facing the west window; low pieces make the 勾配天井 feel higher
     P('frame', 3.575, .3, 90, {w:.3, h:.4, y:1.45, c:'#6f7a52', name:'梯子边小画(石膏板钉)'}),
     P('frame', 3.575, .3, 90, {w:.3, h:.4, y:.95, c:'#b8902f', name:'梯子边小画(石膏板钉)'}),
-    P('lowTable', 1.15, 1.6, 0, {w:.45, d:.45, h:.4, c:walnut, name:'边几'}),
+    P('lowTable', 1.27, 1.0, 0, {w:.45, d:.45, h:.45, c:walnut, name:'边几(沙发右手边)'}),
     myCabinet(P),
     P('rug', 1.7, .9, 0, {w:1.6, d:1.2, c:'#cfc4b0', name:'地毯 160×120'}),
     P('plant', 2.55, .3, 0, {h:1.1, name:'绿植'}),
-    P('curtain', 1.83, .17, 0, {w:1.95, h:1.7, y:.3, c:linen, name:'窗帘 西大窗(遮光+纱帘)'}),
-    P('curtain', .17, .89, 90, {w:1.85, h:1.3, y:.7, c:linen, name:'窗帘 南腰窗'}),
+    P('curtain', .17, .89, 90, {w:1.85, h:1.2, y:.8, c:linen, name:'窗帘 南腰窗(到窗台)'}),
     // 和室 — bedroom: slatted low bed in the north half, the south half kept open toward the balcony
     P('bedSD', 2.615, 4.75, 90, {h:.3, c:'#b8916a', name:'すのこ低床 半双人 120×195'}),
     P('nightstand', 3.35, 3.95, 90, {c:oak, name:'床头柜'}),
@@ -1640,7 +1642,7 @@ function artistItems(){
     P('roundRug', 1.6, .95, 0, {w:1.6, d:1.6, c:'#2b3a55', name:'靛蓝圆地毯 Ø160'}),
     ...workCorner(P, ai, '#3a2a20'),
     P('wallPanel', 3.585, .915, 90, {w:1.73, h:2.8, c:'#1f2b44', name:'梯子墙 · 靛蓝可撕墙纸'}),
-    P('lowTable', 1.15, 1.5, 0, {w:.45, d:.45, h:.4, c:red, name:'朱漆边几'}),
+    P('lowTable', 1.27, 1.0, 0, {w:.45, d:.45, h:.45, c:red, name:'朱漆边几(沙发右手边)'}),
     myCabinet(P),
     P('paperLamp', 1.6, .95, 0, {y:1.7, w:.8, d:.8, h:.8, name:'大和纸灯 Ø80(从屋脊垂下)'}),
     P('banner', 1.6, 1.36, 0, {y:1.5, w:1.1, h:1.7, c:'#2b3a55', name:'靛染长布(系在阁楼栏杆上垂下)'}),
@@ -1681,11 +1683,10 @@ function photoItems(){
     myCabinet(P),
     P('lamp', 1.15, 2.05, 0, {h:1.5, name:'落地灯 2700K(光从侧面扫过柜门)'}),
     P('rug', 1.65, 1.3, 90, {w:1.6, d:1.2, c:'#b9b2a6', name:'暖灰地毯'}),
-    P('lowTable', 1.2, 1.4, 0, {w:.5, d:.5, h:.4, c:'#1e1e1e', name:'哑光黑边几'}),
-    P('paperLamp', 1.2, 1.4, 0, {y:1.45, w:.4, d:.4, h:.3, name:'低吊灯(只照亮边几)'}),
+    P('lowTable', 1.27, 1.0, 0, {w:.45, d:.45, h:.45, c:'#1e1e1e', name:'哑光黑边几(沙发右手边)'}),
+    P('paperLamp', 1.27, 1.0, 0, {y:1.45, w:.4, d:.4, h:.3, name:'低吊灯(只照亮边几)'}),
     P('uplight', 2.6, .35, 0, {name:'地面上照灯(打亮斜顶和原木梁)'}),
-    P('curtain', 1.83, .17, 0, {w:1.95, h:1.7, y:.3, c:sheer, name:'亚麻纱帘(夜里用)'}),
-    P('curtain', .17, .89, 90, {w:1.85, h:1.3, y:.7, c:sheer, name:'亚麻纱帘'}),
+    P('curtain', .17, .89, 90, {w:1.85, h:1.2, y:.8, c:sheer, name:'亚麻纱帘(到窗台)'}),
     // 和室 — morning room; the end of the sightline from the 洋室 is a big plant backlit by the east window
     P('bedSD', 2.615, 4.75, 90, {h:.25, c:'#9c8f80', name:'低床(东窗晨光叫醒你)'}),
     P('plant', 1.1, 6.0, 0, {w:.6, d:.6, h:1.6, c:'#4f6b45', name:'大叶植物(两室视线尽头, 逆光剪影)'}),
