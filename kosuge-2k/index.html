@@ -1337,11 +1337,20 @@ const BUILD = {
       const y = -(i + 1) * rise, z0 = -d / 2 + i * run;
       bx(g, w * .82, .006, run * .78, c, .03, y, z0 + run * .42, {roughness:1});
       bx(g, w * .9, .004, .025, '#e2d8c2', 0, y, z0 + run - .016, {roughness:.6});
-      if (i % 3 === 1){
+      if (!(curItem || {}).strip && i % 3 === 1){
         const l = bx(g, .012, .035, .07, '#fff4dc', -w / 2 + .006, y + .17, z0 + run / 2, {emissive:lin('#fff1cf'), emissiveIntensity:1});
         l.userData.lampGlow = true;
         if (i % 6 === 1) addGlow(g, -w / 2 + .1, y + .2, z0 + run / 2, .35);
       }
+    }
+    if ((curItem || {}).strip){
+      // one diffused USB LED strip in an aluminium channel along the photo-wall side, following the slope just
+      // above the treads; it grazes across every step and washes the framed prints from below
+      const z1 = -d / 2, z2 = d / 2, y1 = .06, y2 = -h + rise + .06, L = Math.hypot(z2 - z1, y2 - y1), a = Math.atan2(y1 - y2, z2 - z1);
+      const ch = mk(new THREE.BoxGeometry(.018, .012, L), '#b9bdbf', {metalness:.5, roughness:.4}); ch.position.set(-w / 2 + .012, (y1 + y2) / 2, 0); ch.rotation.x = a; g.add(ch);
+      const led = mk(new THREE.BoxGeometry(.012, .006, L), '#fff4dc', {emissive:lin('#ffe9c4'), emissiveIntensity:1.2}); led.position.set(-w / 2 + .022, (y1 + y2) / 2 + .004, 0); led.rotation.x = a; led.userData.lampGlow = true; g.add(led);
+      for (const t of [.12, .38, .62, .88]) addGlow(g, -w / 2 + .08, y1 + (y2 - y1) * t + .08, z1 + (z2 - z1) * t, .45);
+      for (const [zz, yy] of [[z1 + .05, y1 + .05], [z2 - .05, y2 + .05]]) bx(g, .02, .04, .04, '#e8e8e6', -w / 2 + .012, yy, zz);   // motion sensors at top and bottom
     }
   },
   windowSeat(g, w, d, h, c){
@@ -1732,7 +1741,7 @@ const nookCabinet = P => P('wardrobe', .235, 3.15, 270, {w:.8, d:.37, h:1.8, c:'
 /* the stair down to the 1F entrance: safety first (mats, nosing strips, foot lights), then a short gallery
    you climb through on the way home, and a curtain at the top that keeps the cold 1F air downstairs */
 const stairItems = P => [
-  P('stairKit', 4.095, 4.55, 0, {name:'楼梯 · 防滑垫+踏步边条+感应脚灯'}),
+  P('stairKit', 4.095, 4.55, 0, {strip:true, name:'楼梯 · 防滑垫+踏步边条+沿墙感应灯带'}),
   P('photo', 3.705, 3.95, 270, {w:.3, h:.4, mat:.03, y:.79, c:'#4a4a4a', name:'楼梯照片 1(亚克力薄框, 沿坡度排)'}),
   P('photo', 3.705, 4.30, 270, {w:.3, h:.4, mat:.03, y:.27, c:'#555555', name:'楼梯照片 2(亚克力薄框)'}),
   P('photo', 3.705, 4.65, 270, {w:.3, h:.4, mat:.03, y:-.25, c:'#3e3e3e', name:'楼梯照片 3(亚克力薄框)'}),
