@@ -1788,15 +1788,15 @@ function swapItems(){
 function lineItems(){
   const P = (t, x, z, rot, extra) => Object.assign(I(t, x, z, rot), {locked:false}, extra || {});
   return [
-    // 洋室 curtains in a soft grey-green (sage): calm next to the beige walls, dark timber and tatami
-    ...workCorner(P, '#6b4a33', '#a87b50', '#b7c4a5'),
+    // 洋室 curtains in a deep vintage olive: calm next to the beige walls, dark timber and tatami
+    ...workCorner(P, '#6b4a33', '#a87b50', '#56603e'),
     P('windowSeat', 1.96, .35, 0, {w:1.42, d:.5, h:.42, name:'窗边长榻 142×50 高42(在窗台下, 当沙发)'}),
     nookCabinet(P),
     P('rug', 2.0, 1.45, 0, {w:1.6, d:1.2, c:'#cfc4b0', name:'地毯 160×120'}),
     P('lamp', .3, 2.1, 0, {h:1.5, name:'落地灯 2700K'}),
     P('plant', .3, 2.45, 0, {w:.35, d:.35, h:1.4, name:'绿植'}),
     ...ladderGallery(P),
-    P('curtain', .17, .89, 90, {w:1.85, h:1.2, y:.8, c:'#b7c4a5', name:'南腰窗 窗帘 浅灰绿(到窗台)'}),
+    P('curtain', .17, .89, 90, {w:1.85, h:1.2, y:.8, c:'#56603e', name:'南腰窗 窗帘 复古绿(到窗台)'}),
     ...stairItems(P),
     ...waRoom(P, '#d9d4ca'),
     P('chabudai', 2.1, 5.85, 0, {w:.6, d:.6, h:.33, name:'矮圆桌(东窗边喝茶)'}),
