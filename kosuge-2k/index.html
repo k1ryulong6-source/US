@@ -1691,11 +1691,12 @@ const myCabinet = P => P('wardrobe', .235, 2.15, 270, {w:.8, d:.37, h:1.8, c:'#8
 /* the computer corner: desk against the west wall in the 洋室's south corner, the west window to your right.
    The viewer's recliner is the desk chair; its footrest pops out under the desk (open knee space, no low crossbar). */
 const workCorner = (P, rc, dc) => [
-  P('desk', .62, .29, 0, {w:1.14, d:.48, h:.75, c:dc || '#a87b50', name:'你的电脑桌 114×48×75'}),
-  P('monitor', .62, .18, 0, {y:.75, name:'显示器'}),
-  P('recliner', .62, .98, 180, {w:.78, d:.70, h:.90, seat:.40, foot:.50, c:rc, name:'你的单人沙发 78×70 座高40 背高90(虚影=脚托/后仰)'}),
-  // the desk stands 26 cm in front of the west window, so that window gets a roller blind inside its frame
-  P('wallPanel', 1.83, .03, 0, {w:1.7, h:1.45, y:.45, c:'#f1ece2', name:'西窗卷帘(装在窗框内, 不碰桌子)'})
+  // the desk stands 11 cm off the west wall, so the west curtain can drop behind it
+  P('desk', .62, .40, 0, {w:1.14, d:.48, h:.75, c:dc || '#a87b50', name:'你的电脑桌 114×48×75(离墙11cm, 窗帘垂在桌后)'}),
+  P('monitor', .62, .29, 0, {y:.75, name:'显示器'}),
+  P('recliner', .62, 1.09, 180, {w:.78, d:.70, h:.90, seat:.40, foot:.50, c:rc, name:'你的单人沙发 78×70 座高40 背高90(虚影=脚托/后仰)'}),
+  // west curtain: 2 panels 100×150, hem just above the sill — behind the desk and over the window seat
+  P('curtain', 1.83, .11, 0, {w:2.0, h:1.5, y:.46, c:'#e3d9c8', name:'西窗窗帘 2片 幅100×丈150(下摆到窗台, 垂在桌后)'})
 ];
 /* 和室 as a futon room: laid out at night with the head to the south (not north, 北枕), folded into the closet
    every morning so the tatami can breathe. Kept clear of the closet and storage door swings. */
@@ -1788,7 +1789,7 @@ function lineItems(){
   const P = (t, x, z, rot, extra) => Object.assign(I(t, x, z, rot), {locked:false}, extra || {});
   return [
     ...workCorner(P, '#6b4a33', '#a87b50'),
-    P('windowSeat', 1.96, .3, 0, {w:1.42, d:.5, h:.42, name:'窗边长榻 142×50 高42(在窗台下, 当沙发)'}),
+    P('windowSeat', 1.96, .35, 0, {w:1.42, d:.5, h:.42, name:'窗边长榻 142×50 高42(在窗台下, 当沙发)'}),
     nookCabinet(P),
     P('rug', 2.0, 1.45, 0, {w:1.6, d:1.2, c:'#cfc4b0', name:'地毯 160×120'}),
     P('lamp', .3, 2.1, 0, {h:1.5, name:'落地灯 2700K'}),
