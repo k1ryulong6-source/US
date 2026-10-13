@@ -1790,9 +1790,11 @@ function lineItems(){
     ...waRoom(P, '#d9d4ca'),
     P('chabudai', 2.1, 5.85, 0, {w:.6, d:.6, h:.33, name:'矮圆桌(东窗边喝茶)'}),
     P('zabuton', 2.65, 5.85, 270, {c:'#2f3e55'}),
-    P('curtain', .17, 4.545, 90, {w:1.9, h:1.6, y:.3, c:'#d8cfbf', name:'阳台窗 遮光窗帘'}),
+    // 和室 curtains: one charcoal fabric for both windows (bedroom, and the ground for black-and-white prints);
+    // the 洋室 keeps natural linen, so the view through the 天袋 opening goes from light to dark
+    P('curtain', .17, 4.545, 90, {w:1.9, h:1.6, y:.3, c:'#3b3b3d', name:'阳台窗 遮光窗帘 · 深炭灰(不别照片)'}),
     // east window: the blackout curtain itself, with small prints pinned all over its room side
-    P('photoCurtain', 1.82, 6.2, 0, {w:1.85, h:1.6, y:.3, c:'#d8cfbf', name:'东窗 遮光帘 · 别满 L 版小照片(约40张)'}),
+    P('photoCurtain', 1.82, 6.2, 0, {w:1.85, h:1.6, y:.3, c:'#3b3b3d', name:'东窗 遮光帘 · 深炭灰 · 别满带白边的黑白小照片(约40张)'}),
     ...balconyItems(P), ...loftItems(P), ...kitchenItems(P)
   ];
 }
