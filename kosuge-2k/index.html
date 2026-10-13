@@ -242,6 +242,7 @@ const ITEMS = {
   curtain:{n:'窗帘',jp:'カーテン',cat:'decor',w:1.8,d:.08,h:1.95,c:'#d8d2c4',b:'curtain',soft:1,inWall:1},
   frame:{n:'挂画',jp:'絵',cat:'art',w:.9,d:.03,h:.7,c:'#c4532d',b:'frame',inWall:1},
   photo:{n:'相片(卡纸框)',jp:'写真',cat:'art',w:.42,d:.03,h:.54,c:'#777777',b:'photo',inWall:1},
+  photoStrings:{n:'照片线帘',jp:'フォトカーテン',cat:'art',w:1.8,d:.03,h:1.45,c:'#c9b48a',b:'photoStrings',soft:1,inWall:1},
   noren:{n:'双面印照片门帘',jp:'両面のれん',cat:'art',w:1.72,d:.03,h:1.78,c:'#2a2a2a',b:'noren',soft:1,inWall:1},
   spot:{n:'夹灯(夹在長押上)',jp:'クリップライト',cat:'art',w:.1,d:.15,h:.15,c:'#1e1e1e',b:'spot',soft:1,inWall:1},
   roundRug:{n:'圆地毯',jp:'ラウンドラグ',cat:'decor',w:1.6,d:1.6,h:.01,c:'#2b3a55',b:'roundRug',soft:1},
@@ -400,7 +401,7 @@ const IMG_KEY = LS_KEY + '-img';
 let IMG = {};
 try { IMG = JSON.parse(localStorage.getItem(IMG_KEY) || '{}') || {}; } catch(e){ IMG = {}; }
 function saveImgs(){
-  const used = new Set(); S.items.forEach(i => { if (i.img) used.add(i.img); if (i.img2) used.add(i.img2); });
+  const used = new Set(); S.items.forEach(i => { if (i.img) used.add(i.img); if (i.img2) used.add(i.img2); (i.imgs || []).forEach(k => used.add(k)); });
   for (const k of Object.keys(IMG)) if (!used.has(k)) delete IMG[k];
   try { localStorage.setItem(IMG_KEY, JSON.stringify(IMG)); }
   catch(e){ saveNote = '照片太多或太大，超出浏览器的保存上限：照片这次没存上，请删掉几张或用「导出」备份'; const el = $('#saveNote'); if (el) el.textContent = saveNote; }
@@ -1219,6 +1220,31 @@ const BUILD = {
     bx(g, w - .02, h - .02, .004, '#f4f2ec', 0, .01, d / 2);
     bx(g, pw, ph, .004, '#ffffff', 0, m, d / 2 + .002, {map, roughness:.6});
   },
+  photoStrings(g, w, d, h, c){
+    // strings hung from the curtain rail on runners, small prints clipped on both sides of each string;
+    // odd strings are offset half a step so the grid reads loose, and a few gaps let the window light through
+    const it = curItem || {}, keys = (it.imgs || []).filter(k => IMG[k]);
+    const pw = it.pw || .089, ph = it.ph || .127, step = ph + .05;
+    const n = Math.max(2, Math.round(w / .2)), gap = w / n, rnd = mulberry(Math.round(w * 977 + h * 131));
+    const tones = ['#3a3a3a', '#4a4a4a', '#5a5a5a', '#444444', '#505050', '#3e3e3e'];
+    bx(g, w + .1, .02, .025, '#c9cdd0', 0, h, 0, {metalness:.5, roughness:.35});
+    let k = 0;
+    for (let i = 0; i < n; i++){
+      const x = -w / 2 + gap * (i + .5);
+      cyl(g, .0012, .0012, h, c, x, 0, 0, 4);
+      bx(g, .02, .015, .02, '#9aa0a2', x, h - .02, 0);
+      const off = i % 2 ? step / 2 : 0;
+      for (let j = 0; ; j++){
+        const y = h - .07 - (j + 1) * step + off;
+        if (y < .03) break;
+        if (rnd() < .1) continue;
+        const map = keys.length ? userTex(keys[k % keys.length], pw / ph) : artTex('photo', tones[k % tones.length]);
+        bx(g, pw, ph, .0015, '#ffffff', x, y, 0, {map, roughness:.5});
+        bx(g, .01, .022, .007, '#c9b48a', x, y + ph - .012, 0);
+        k++;
+      }
+    }
+  },
   noren(g, w, d, h, c){
     // split curtain printed on both faces, three layers (print / blackout / print) so the sides don't show through
     const it = curItem || {}, pw = w / 2 - .01, edge = new THREE.MeshStandardMaterial({color:lin(c), roughness:1});
@@ -1738,7 +1764,11 @@ function lineItems(){
     P('chabudai', 2.1, 5.85, 0, {w:.6, d:.6, h:.33, name:'矮圆桌(东窗边喝茶)'}),
     P('zabuton', 2.65, 5.85, 270, {c:'#2f3e55'}),
     P('curtain', .17, 4.545, 90, {w:1.9, h:1.6, y:.3, c:'#d8cfbf', name:'阳台窗 遮光窗帘'}),
-    P('curtain', 1.82, 6.2, 0, {w:1.85, h:1.6, y:.3, c:'#d8cfbf', name:'东窗 遮光窗帘'}),
+    // east window: a string curtain of small prints on the window-side rail, the blackout curtain on the
+    // room-side rail drawn open to both sides — open it in the morning and the light comes through the prints
+    P('photoStrings', 1.82, 6.27, 0, {w:1.8, h:1.45, y:.45, name:'照片线帘 · 9根线 约55张 L 版(窗侧轨道)'}),
+    P('curtain', .85, 6.18, 0, {w:.32, h:1.6, y:.3, c:'#d8cfbf', name:'东窗 遮光帘(拉开, 左)'}),
+    P('curtain', 2.79, 6.18, 0, {w:.32, h:1.6, y:.3, c:'#d8cfbf', name:'东窗 遮光帘(拉开, 右)'}),
     ...balconyItems(P), ...loftItems(P), ...kitchenItems(P)
   ];
 }
@@ -1963,8 +1993,15 @@ function renderFurn(){
 }
 function photoMat(it){ return it.bare ? 0 : (it.mat != null ? it.mat : Math.min(it.w, it.h) * .15); }
 function photoControls(it){
-  if (!['photo', 'frame', 'noren'].includes(it.t)) return '';
+  if (!['photo', 'frame', 'noren', 'photoStrings'].includes(it.t)) return '';
   let h = '<div class="card"><b>照片</b>';
+  if (it.t === 'photoStrings'){
+    const sz = [['L 竖', .089, .127], ['L 横', .127, .089], ['instax mini', .054, .086], ['instax wide', .108, .086], ['2L 竖', .127, .178]];
+    return h + '<div class="fields two"><label class="f">照片规格<select id="p-strsize">' + sz.map(([n, a, b]) =>
+        '<option value="' + a + ',' + b + '"' + (Math.abs((it.pw || .089) - a) < .001 && Math.abs((it.ph || .127) - b) < .001 ? ' selected' : '') + '>' + n + ' ' + cm(a * 10) / 10 + '×' + cm(b * 10) / 10 + '</option>').join('') + '</select></label></div>' +
+      '<div class="row"><label class="btn">选多张照片<input type="file" id="p-imgs" accept="image/*" multiple hidden></label>' + ((it.imgs || []).length ? '<button type="button" class="btn danger" id="p-clear">移除照片</button>' : '') + '</div>' +
+      '<p class="hint">一次可以选很多张，按顺序铺满整面线帘，不够就循环。照片只存在这个浏览器里，不会上传。</p></div>';
+  }
   if (it.t === 'photo'){
     const m = photoMat(it), pw = cm(it.w - 2 * m), ph = cm(it.h - 2 * m);
     h += '<div class="fields two"><label class="f">相纸规格<select id="p-size"><option value="">当前 ' + pw + '×' + ph + ' cm</option>' +
@@ -2000,7 +2037,13 @@ function bindPhotoControls(it){
     readPhoto(f, it.t === 'noren' ? 2400 : 1600, url => { const key = 'img_' + uid(); IMG[key] = url; it[field] = key; saveImgs(); reb(); });
   }); };
   load($('#p-img'), 'img'); load($('#p-img2'), 'img2');
-  const cl = $('#p-clear'); if (cl) cl.addEventListener('click', () => { delete it.img; delete it.img2; reb(); saveImgs(); });
+  const ss = $('#p-strsize'); if (ss) ss.addEventListener('change', () => { const [a, b] = ss.value.split(',').map(Number); it.pw = a; it.ph = b; reb(); });
+  const mi = $('#p-imgs'); if (mi) mi.addEventListener('change', () => {
+    const files = [...mi.files]; if (!files.length) return;
+    const keys = []; let left = files.length;
+    files.forEach((f, idx) => readPhoto(f, 600, url => { const key = 'img_' + uid(); IMG[key] = url; keys[idx] = key; if (--left === 0){ it.imgs = keys; saveImgs(); reb(); } }));
+  });
+  const cl = $('#p-clear'); if (cl) cl.addEventListener('click', () => { delete it.img; delete it.img2; delete it.imgs; reb(); saveImgs(); });
 }
 function readPhoto(file, maxPx, done){
   const rd = new FileReader();
