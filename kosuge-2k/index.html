@@ -1231,7 +1231,7 @@ const BUILD = {
     const sw = it.pw || .089, sh = it.ph || .127, rnd = mulberry(Math.round(w * 733 + h * 97));
     const tones = ['#3a3a3a', '#4a4a4a', '#5a5a5a', '#444444', '#505050', '#3e3e3e'];
     const cols = Math.max(2, Math.floor((w - .08) / (Math.max(sw, sh) + .06))), cw = (w - .08) / cols;
-    const rowH = Math.max(sw, sh) + .06, top = h - .1, bottom = h * .25;
+    const rowH = Math.max(sw, sh) + .06, top = h - .1, bottom = h * (it.bottom != null ? it.bottom : .25);
     let k = 0;
     for (let r = 0; ; r++){
       const y = top - (r + 1) * rowH + (r % 2 ? .02 : 0); if (y < bottom) break;
@@ -1788,24 +1788,25 @@ function swapItems(){
 function lineItems(){
   const P = (t, x, z, rot, extra) => Object.assign(I(t, x, z, rot), {locked:false}, extra || {});
   return [
-    // 洋室 curtains in a deep vintage olive: calm next to the beige walls, dark timber and tatami
-    ...workCorner(P, '#6b4a33', '#a87b50', '#56603e'),
+    // 洋室 curtains in deep warm grey, the west pair carrying the pinned black-and-white prints above head height
+    ...workCorner(P, '#6b4a33', '#a87b50', '#4a4744').map(i => i.t === 'curtain'
+      ? Object.assign(i, {t:'photoCurtain', rot:180, bottom:.45, name:'西窗窗帘 深暖灰 2片 幅100×丈150 · 上半部别黑白小照片'}) : i),
     P('windowSeat', 1.96, .35, 0, {w:1.42, d:.5, h:.42, name:'窗边长榻 142×50 高42(在窗台下, 当沙发)'}),
     nookCabinet(P),
     P('rug', 2.0, 1.45, 0, {w:1.6, d:1.2, c:'#cfc4b0', name:'地毯 160×120'}),
     P('lamp', .3, 2.1, 0, {h:1.5, name:'落地灯 2700K'}),
     P('plant', .3, 2.45, 0, {w:.35, d:.35, h:1.4, name:'绿植'}),
     ...ladderGallery(P),
-    P('curtain', .17, .89, 90, {w:1.85, h:1.2, y:.8, c:'#56603e', name:'南腰窗 窗帘 复古绿(到窗台)'}),
+    P('curtain', .17, .89, 90, {w:1.85, h:1.2, y:.8, c:'#4a4744', name:'南腰窗 窗帘 深暖灰(到窗台)'}),
     ...stairItems(P),
     ...waRoom(P, '#d9d4ca'),
     P('chabudai', 2.1, 5.85, 0, {w:.6, d:.6, h:.33, name:'矮圆桌(东窗边喝茶)'}),
     P('zabuton', 2.65, 5.85, 270, {c:'#2f3e55'}),
     // 和室 curtains: one charcoal fabric for both windows (bedroom, and the ground for black-and-white prints);
     // the 洋室 keeps natural linen, so the view through the 天袋 opening goes from light to dark
-    P('curtain', .17, 4.545, 90, {w:1.9, h:1.6, y:.3, c:'#3b3b3d', name:'阳台窗 遮光窗帘 · 深炭灰(不别照片)'}),
-    // east window: the blackout curtain itself, with small prints pinned all over its room side
-    P('photoCurtain', 1.82, 6.2, 0, {w:1.85, h:1.6, y:.3, c:'#3b3b3d', name:'东窗 遮光帘 · 深炭灰 · 别满带白边的黑白小照片(约40张)'}),
+    // 和室 curtains in vintage olive: with the tatami and the dark timber, a calm, green bedroom
+    P('curtain', .17, 4.545, 90, {w:1.9, h:1.6, y:.3, c:'#56603e', name:'阳台窗 遮光窗帘 复古绿'}),
+    P('curtain', 1.82, 6.2, 0, {w:1.85, h:1.6, y:.3, c:'#56603e', name:'东窗 遮光窗帘 复古绿'}),
     ...balconyItems(P), ...loftItems(P), ...kitchenItems(P)
   ];
 }
